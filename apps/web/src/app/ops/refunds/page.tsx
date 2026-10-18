@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { Amount, PageHeader, StatusBadge } from "../../../components/ui";
 import styles from "../ops.module.css";
 
 interface RefundRecord {
   id: string;
   paymentIntentId: string;
-  amountFormatted: string;
+  amountMinor: number;
   reason: string;
   status: "SUCCEEDED" | "PENDING" | "FAILED";
   compensatingJournalId: string;
@@ -26,7 +27,7 @@ export default function RefundsPage() {
     {
       id: "ref_test_0192a714",
       paymentIntentId: "pi_test_0192a831001",
-      amountFormatted: "₱150.00",
+      amountMinor: 15000,
       reason: "Partial item return",
       status: "SUCCEEDED",
       compensatingJournalId: "jnl_0192a714_refund",
@@ -35,7 +36,7 @@ export default function RefundsPage() {
     {
       id: "ref_test_0192a502",
       paymentIntentId: "pi_test_0192a832002",
-      amountFormatted: "₱1,250.00",
+      amountMinor: 125000,
       reason: "Fraud alert quarantine",
       status: "SUCCEEDED",
       compensatingJournalId: "jnl_0192a502_refund",
@@ -66,7 +67,7 @@ export default function RefundsPage() {
     const newRefund: RefundRecord = {
       id: newId,
       paymentIntentId: targetIntent,
-      amountFormatted: `₱${amountNum.toFixed(2)}`,
+      amountMinor: Math.round(amountNum * 100),
       reason,
       status: "SUCCEEDED",
       compensatingJournalId: `jnl_${newId}_refund`,
@@ -80,20 +81,15 @@ export default function RefundsPage() {
     );
   };
 
+  const remaining = totalCapacity - alreadyRefunded;
+
   return (
     <div>
-      <div className={styles.headerSection}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <h1 className={styles.pageTitle}>Refunds & Capacity Protection</h1>
-            <p className={styles.pageSubtitle}>
-              Strict capacity checking (SELECT FOR UPDATE) preventing over-refunds and posting
-              compensating ledger journals.
-            </p>
-          </div>
-          <span className={styles.badgeSuccess}>OVER-REFUND INVARIANT: ACTIVE</span>
-        </div>
-      </div>
+      <PageHeader
+        title="Refunds & Capacity Protection"
+        subtitle="Strict capacity checking (SELECT FOR UPDATE) preventing over-refunds and posting compensating ledger journals."
+        actions={<StatusBadge status="SUCCEEDED" customLabel="OVER-REFUND INVARIANT: ACTIVE" />}
+      />
 
       <div className={styles.gridTwoCol}>
         <div className={styles.card}>
@@ -111,9 +107,10 @@ export default function RefundsPage() {
                 htmlFor="target-intent-input"
                 style={{
                   fontSize: "12px",
-                  color: "#94a3b8",
+                  color: "var(--color-text-secondary, #475569)",
                   display: "block",
                   marginBottom: "6px",
+                  fontWeight: 600,
                 }}
               >
                 Target Payment Intent ID
@@ -127,18 +124,19 @@ export default function RefundsPage() {
               />
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
               <div>
                 <label
                   htmlFor="payment-total-input"
                   style={{
                     fontSize: "12px",
-                    color: "#94a3b8",
+                    color: "var(--color-text-secondary, #475569)",
                     display: "block",
                     marginBottom: "6px",
+                    fontWeight: 600,
                   }}
                 >
-                  Payment Total (Capacity)
+                  Payment Total
                 </label>
                 <input
                   id="payment-total-input"
@@ -146,6 +144,7 @@ export default function RefundsPage() {
                   disabled
                   className={styles.inputField}
                   value={`₱${totalCapacity.toFixed(2)}`}
+                  style={{ fontVariantNumeric: "tabular-nums" }}
                 />
               </div>
               <div>
@@ -153,9 +152,10 @@ export default function RefundsPage() {
                   htmlFor="already-refunded-input"
                   style={{
                     fontSize: "12px",
-                    color: "#94a3b8",
+                    color: "var(--color-text-secondary, #475569)",
                     display: "block",
                     marginBottom: "6px",
+                    fontWeight: 600,
                   }}
                 >
                   Already Refunded
@@ -166,6 +166,33 @@ export default function RefundsPage() {
                   disabled
                   className={styles.inputField}
                   value={`₱${alreadyRefunded.toFixed(2)}`}
+                  style={{ fontVariantNumeric: "tabular-nums" }}
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="remaining-capacity-input"
+                  style={{
+                    fontSize: "12px",
+                    color: "var(--color-text-secondary, #475569)",
+                    display: "block",
+                    marginBottom: "6px",
+                    fontWeight: 600,
+                  }}
+                >
+                  Remaining Capacity
+                </label>
+                <input
+                  id="remaining-capacity-input"
+                  type="text"
+                  disabled
+                  className={styles.inputField}
+                  value={`₱${remaining.toFixed(2)}`}
+                  style={{
+                    fontVariantNumeric: "tabular-nums",
+                    fontWeight: 700,
+                    color: remaining > 0 ? "#166534" : "#dc2626",
+                  }}
                 />
               </div>
             </div>
@@ -175,9 +202,10 @@ export default function RefundsPage() {
                 htmlFor="refund-amount-input"
                 style={{
                   fontSize: "12px",
-                  color: "#94a3b8",
+                  color: "var(--color-text-secondary, #475569)",
                   display: "block",
                   marginBottom: "6px",
+                  fontWeight: 600,
                 }}
               >
                 Refund Amount (PHP)
@@ -189,6 +217,7 @@ export default function RefundsPage() {
                 className={styles.inputField}
                 value={refundAmount}
                 onChange={(e) => setRefundAmount(e.target.value)}
+                style={{ fontVariantNumeric: "tabular-nums" }}
               />
             </div>
 
@@ -197,9 +226,10 @@ export default function RefundsPage() {
                 htmlFor="refund-reason-input"
                 style={{
                   fontSize: "12px",
-                  color: "#94a3b8",
+                  color: "var(--color-text-secondary, #475569)",
                   display: "block",
                   marginBottom: "6px",
+                  fontWeight: 600,
                 }}
               >
                 Reason for Refund
@@ -216,13 +246,14 @@ export default function RefundsPage() {
             {errorMsg && (
               <div
                 style={{
-                  background: "rgba(239, 68, 68, 0.1)",
-                  border: "1px solid #ef4444",
-                  padding: "10px",
+                  background: "#fef2f2",
+                  border: "1px solid #fecaca",
+                  padding: "10px 14px",
                   borderRadius: "6px",
-                  color: "#f87171",
+                  color: "#991b1b",
                   fontSize: "12px",
                 }}
+                role="alert"
               >
                 {errorMsg}
               </div>
@@ -231,13 +262,14 @@ export default function RefundsPage() {
             {successMsg && (
               <div
                 style={{
-                  background: "rgba(16, 185, 129, 0.1)",
-                  border: "1px solid #10b981",
-                  padding: "10px",
+                  background: "#f0fdf4",
+                  border: "1px solid #bbf7d0",
+                  padding: "10px 14px",
                   borderRadius: "6px",
-                  color: "#34d399",
+                  color: "#166534",
                   fontSize: "12px",
                 }}
+                role="status"
               >
                 {successMsg}
               </div>
@@ -254,9 +286,15 @@ export default function RefundsPage() {
             <h2 className={styles.cardTitle}>Compensating Accounting Architecture</h2>
             <span className={styles.badgePill}>DOUBLE-ENTRY RULE</span>
           </div>
-          <p style={{ fontSize: "13px", color: "#94a3b8", lineHeight: 1.6 }}>
-            Under GAAP and modern fintech engineering, payment records are <b>immutable</b>. A
-            refund does not delete or overwrite the original payment.
+          <p
+            style={{
+              fontSize: "13px",
+              color: "var(--color-text-secondary, #475569)",
+              lineHeight: 1.6,
+            }}
+          >
+            Under GAAP and modern fintech engineering, payment records are{" "}
+            <strong>immutable</strong>. A refund does not delete or overwrite the original payment.
           </p>
           <div className={styles.codeBlock} style={{ marginBottom: "14px" }}>
             {`-- Original Payment Success:
@@ -268,7 +306,7 @@ CR 4000 Platform Fee Revenue     ₱ 15.00
 DR 2000 Merchant Settlement      ₱100.00
 CR 1000 Cash at PayMongo         ₱100.00`}
           </div>
-          <p style={{ fontSize: "12px", color: "#64748b" }}>
+          <p style={{ fontSize: "12px", color: "var(--color-text-muted, #64748b)" }}>
             The ledger remains mathematically conserved: net balance is updated via forward
             additions only.
           </p>
@@ -284,12 +322,14 @@ CR 1000 Cash at PayMongo         ₱100.00`}
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>Refund ID</th>
-                <th>Payment Intent</th>
-                <th>Amount</th>
-                <th>Reason</th>
-                <th>Compensating Journal</th>
-                <th>Status</th>
+                <th scope="col">Refund ID</th>
+                <th scope="col">Payment Intent</th>
+                <th scope="col" className={styles.numCol}>
+                  Amount
+                </th>
+                <th scope="col">Reason</th>
+                <th scope="col">Compensating Journal</th>
+                <th scope="col">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -301,15 +341,15 @@ CR 1000 Cash at PayMongo         ₱100.00`}
                   <td>
                     <code>{ref.paymentIntentId}</code>
                   </td>
-                  <td>
-                    <b>{ref.amountFormatted}</b>
+                  <td className={styles.numCol}>
+                    <Amount amountMinor={ref.amountMinor} currency="PHP" align="right" />
                   </td>
                   <td>{ref.reason}</td>
                   <td>
                     <code>{ref.compensatingJournalId}</code>
                   </td>
                   <td>
-                    <span className={styles.badgeSuccess}>{ref.status}</span>
+                    <StatusBadge status={ref.status} />
                   </td>
                 </tr>
               ))}

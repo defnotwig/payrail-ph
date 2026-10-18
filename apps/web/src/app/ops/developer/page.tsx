@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PageHeader, StatusBadge } from "../../../components/ui";
 import styles from "../ops.module.css";
 
 interface ApiKey {
@@ -72,7 +73,7 @@ export default function DeveloperPlatformPage() {
       urlLower.includes("192.168.")
     ) {
       setSsrfError(
-        "SSRF Security Violation: Outbound webhook endpoints cannot point to loopback, RFC 1918 private subnets, or AWS metadata addresses (169.254.169.254).",
+        "SSRF Security Violation: Outbound webhook endpoints cannot point to loopback, RFC 1918 private subnets, or cloud metadata addresses (169.254.169.254).",
       );
       return;
     }
@@ -89,28 +90,20 @@ export default function DeveloperPlatformPage() {
 
   return (
     <div>
-      <div className={styles.headerSection}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <h1 className={styles.pageTitle}>Merchant API Platform & Outbound Webhooks</h1>
-            <p className={styles.pageSubtitle}>
-              Cryptographically hashed API key credentials (SHA-256) and SSRF-hardened HMAC-signed
-              outbound webhooks.
-            </p>
-          </div>
+      <PageHeader
+        title="Merchant API Platform & Outbound Webhooks"
+        subtitle="Cryptographically hashed API key credentials (SHA-256) and SSRF-hardened HMAC-signed outbound webhooks."
+        actions={
           <button type="button" className={styles.buttonPrimary} onClick={handleCreateKey}>
             + Generate New API Key
           </button>
-        </div>
-      </div>
+        }
+      />
 
       {createdPlainKey && (
-        <div
-          className={styles.card}
-          style={{ border: "1px solid #10b981", background: "rgba(16, 185, 129, 0.05)" }}
-        >
+        <div className={styles.card} style={{ border: "1px solid #86efac", background: "#f0fdf4" }}>
           <div className={styles.cardHeader}>
-            <h2 className={styles.cardTitle} style={{ color: "#34d399" }}>
+            <h2 className={styles.cardTitle} style={{ color: "#166534" }}>
               🔑 New Merchant API Key Generated
             </h2>
             <button
@@ -121,12 +114,12 @@ export default function DeveloperPlatformPage() {
               Dismiss
             </button>
           </div>
-          <p style={{ fontSize: "13px", color: "#cbd5e1" }}>
-            Copy this key now. For PCI and security compliance,{" "}
-            <b>we do not store the plaintext key</b> in our database (only the SHA-256 digest is
-            stored).
+          <p style={{ fontSize: "13px", color: "#166534", margin: "0 0 10px 0" }}>
+            Copy this secret key immediately. For PCI and security compliance,{" "}
+            <strong>we never store the plaintext key</strong> in our database (only the SHA-256
+            digest is persisted).
           </p>
-          <div className={styles.codeBlock} style={{ color: "#34d399" }}>
+          <div className={styles.codeBlock} style={{ color: "#86efac", fontWeight: 600 }}>
             {createdPlainKey}
           </div>
         </div>
@@ -142,10 +135,10 @@ export default function DeveloperPlatformPage() {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>Name / ID</th>
-                  <th>Key Prefix</th>
-                  <th>Scopes</th>
-                  <th>Status</th>
+                  <th scope="col">Name / ID</th>
+                  <th scope="col">Key Prefix</th>
+                  <th scope="col">Scopes</th>
+                  <th scope="col">Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -153,9 +146,11 @@ export default function DeveloperPlatformPage() {
                   <tr key={key.id}>
                     <td>
                       <div>
-                        <b>{key.name}</b>
+                        <strong>{key.name}</strong>
                       </div>
-                      <code style={{ fontSize: "11px", color: "#64748b" }}>{key.id}</code>
+                      <code style={{ fontSize: "11px", color: "var(--color-text-muted, #64748b)" }}>
+                        {key.id}
+                      </code>
                     </td>
                     <td>
                       <code>{key.prefix}...</code>
@@ -170,7 +165,7 @@ export default function DeveloperPlatformPage() {
                       </div>
                     </td>
                     <td>
-                      <span className={styles.badgeSuccess}>ACTIVE</span>
+                      <StatusBadge status="SUCCEEDED" customLabel="ACTIVE" />
                     </td>
                   </tr>
                 ))}
@@ -182,7 +177,7 @@ export default function DeveloperPlatformPage() {
         <div className={styles.card}>
           <div className={styles.cardHeader}>
             <h2 className={styles.cardTitle}>Register Outbound Webhook</h2>
-            <span className={styles.badgeSuccess}>SSRF HARDENED</span>
+            <StatusBadge status="SUCCEEDED" customLabel="SSRF HARDENED" />
           </div>
           <form
             onSubmit={handleAddEndpoint}
@@ -193,9 +188,10 @@ export default function DeveloperPlatformPage() {
                 htmlFor="endpoint-url-input"
                 style={{
                   fontSize: "12px",
-                  color: "#94a3b8",
+                  color: "var(--color-text-secondary, #475569)",
                   display: "block",
                   marginBottom: "6px",
+                  fontWeight: 600,
                 }}
               >
                 HTTPS Webhook Endpoint URL
@@ -211,13 +207,14 @@ export default function DeveloperPlatformPage() {
             {ssrfError && (
               <div
                 style={{
-                  background: "rgba(239, 68, 68, 0.1)",
-                  border: "1px solid #ef4444",
-                  padding: "8px",
+                  background: "#fef2f2",
+                  border: "1px solid #fecaca",
+                  padding: "10px",
                   borderRadius: "6px",
-                  color: "#f87171",
+                  color: "#991b1b",
                   fontSize: "12px",
                 }}
+                role="alert"
               >
                 {ssrfError}
               </div>
@@ -227,8 +224,16 @@ export default function DeveloperPlatformPage() {
             </button>
           </form>
 
-          <div style={{ marginTop: "16px", borderTop: "1px solid #232f48", paddingTop: "12px" }}>
-            <h3 style={{ fontSize: "12px", color: "#94a3b8", margin: "0 0 6px 0" }}>
+          <div style={{ marginTop: "16px", borderTop: "1px solid #e2e8f0", paddingTop: "14px" }}>
+            <h3
+              style={{
+                fontSize: "12px",
+                color: "var(--color-text-muted, #64748b)",
+                textTransform: "uppercase",
+                letterSpacing: "0.04em",
+                margin: "0 0 6px 0",
+              }}
+            >
               Outbound Webhook Signature Scheme
             </h3>
             <div className={styles.codeBlock} style={{ fontSize: "11px" }}>
@@ -250,11 +255,11 @@ Payload: HMAC-SHA256(key=endpoint_secret, data="\${timestamp}.\${raw_body}")`}
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>Endpoint ID</th>
-                <th>Target URL</th>
-                <th>Subscribed Events</th>
-                <th>Signing Secret</th>
-                <th>Status</th>
+                <th scope="col">Endpoint ID</th>
+                <th scope="col">Target URL</th>
+                <th scope="col">Subscribed Events</th>
+                <th scope="col">Signing Secret</th>
+                <th scope="col">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -264,7 +269,7 @@ Payload: HMAC-SHA256(key=endpoint_secret, data="\${timestamp}.\${raw_body}")`}
                     <code>{wh.id}</code>
                   </td>
                   <td>
-                    <b>{wh.url}</b>
+                    <strong>{wh.url}</strong>
                   </td>
                   <td>
                     {wh.events.map((e) => (
@@ -277,7 +282,7 @@ Payload: HMAC-SHA256(key=endpoint_secret, data="\${timestamp}.\${raw_body}")`}
                     <code>{wh.secretMasked}</code>
                   </td>
                   <td>
-                    <span className={styles.badgeSuccess}>{wh.status}</span>
+                    <StatusBadge status="SUCCEEDED" customLabel={wh.status} />
                   </td>
                 </tr>
               ))}

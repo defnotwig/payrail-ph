@@ -1,7 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { Amount, MetricCard, MetricGrid, PageHeader, StatusBadge } from "../../../components/ui";
 import styles from "../ops.module.css";
+
+interface JournalLine {
+  accountNumber: string;
+  accountName: string;
+  debit: number | null;
+  credit: number | null;
+}
 
 interface JournalEntry {
   id: string;
@@ -9,51 +16,44 @@ interface JournalEntry {
   description: string;
   referenceType: string;
   referenceId: string;
-  lines: {
-    accountNumber: string;
-    accountName: string;
-    direction: "DEBIT" | "CREDIT";
-    amount: string;
-  }[];
+  lines: JournalLine[];
 }
 
 export default function LedgerPage() {
-  const [_selectedJournal, _setSelectedJournal] = useState<string | null>(null);
-
   const accounts = [
     {
       number: "1000",
       name: "Cash at PayMongo (Clearing)",
       type: "ASSET",
-      balance: "₱142,500.00",
+      balanceMinor: 14250000,
       status: "ACTIVE",
     },
     {
       number: "1100",
       name: "Accounts Receivable",
       type: "ASSET",
-      balance: "₱0.00",
+      balanceMinor: 0,
       status: "ACTIVE",
     },
     {
       number: "2000",
       name: "Merchant Settlement Payable",
       type: "LIABILITY",
-      balance: "₱138,225.00",
+      balanceMinor: 13822500,
       status: "ACTIVE",
     },
     {
       number: "4000",
       name: "Platform Fee Revenue",
       type: "REVENUE",
-      balance: "₱4,275.00",
+      balanceMinor: 427500,
       status: "ACTIVE",
     },
     {
       number: "5000",
       name: "Provider Processing Fee Expense",
       type: "EXPENSE",
-      balance: "₱2,850.00",
+      balanceMinor: 285000,
       status: "ACTIVE",
     },
   ];
@@ -69,20 +69,20 @@ export default function LedgerPage() {
         {
           accountNumber: "1000",
           accountName: "Cash at PayMongo",
-          direction: "DEBIT",
-          amount: "₱500.00",
+          debit: 50000,
+          credit: null,
         },
         {
           accountNumber: "2000",
           accountName: "Merchant Payable",
-          direction: "CREDIT",
-          amount: "₱485.00",
+          debit: null,
+          credit: 48500,
         },
         {
           accountNumber: "4000",
           accountName: "Platform Fee Revenue",
-          direction: "CREDIT",
-          amount: "₱15.00",
+          debit: null,
+          credit: 1500,
         },
       ],
     },
@@ -96,14 +96,14 @@ export default function LedgerPage() {
         {
           accountNumber: "2000",
           accountName: "Merchant Payable",
-          direction: "DEBIT",
-          amount: "₱250.00",
+          debit: 25000,
+          credit: null,
         },
         {
           accountNumber: "1000",
           accountName: "Cash at PayMongo",
-          direction: "CREDIT",
-          amount: "₱250.00",
+          debit: null,
+          credit: 25000,
         },
       ],
     },
@@ -117,14 +117,14 @@ export default function LedgerPage() {
         {
           accountNumber: "2000",
           accountName: "Merchant Payable",
-          direction: "DEBIT",
-          amount: "₱100,000.00",
+          debit: 10000000,
+          credit: null,
         },
         {
           accountNumber: "1000",
           accountName: "Cash at PayMongo",
-          direction: "CREDIT",
-          amount: "₱100,000.00",
+          debit: null,
+          credit: 10000000,
         },
       ],
     },
@@ -132,44 +132,36 @@ export default function LedgerPage() {
 
   return (
     <div>
-      <div className={styles.headerSection}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <h1 className={styles.pageTitle}>Immutable Double-Entry Ledger</h1>
-            <p className={styles.pageSubtitle}>
-              Rigorous financial accounting engine enforcing mathematical equality: Total Debits ===
-              Total Credits.
-            </p>
-          </div>
-          <span className={styles.badgeSuccess}>INVARIANT: 100% BALANCED</span>
-        </div>
-      </div>
+      <PageHeader
+        title="Immutable Double-Entry Ledger"
+        subtitle="Rigorous financial accounting engine enforcing mathematical equality: Total Debits === Total Credits per transaction and currency."
+        actions={<StatusBadge status="SUCCEEDED" customLabel="INVARIANT: 100% BALANCED" />}
+      />
 
-      <div className={styles.statsGrid}>
-        <div className={styles.statCard}>
-          <div className={styles.statLabel}>Sum of All Debits</div>
-          <div className={styles.statValue}>₱1,245,500.00</div>
-          <div className={styles.statSubtext}>Across all historical journals</div>
-        </div>
-        <div className={styles.statCard}>
-          <div className={styles.statLabel}>Sum of All Credits</div>
-          <div className={styles.statValue}>₱1,245,500.00</div>
-          <div className={styles.statSubtext}>Across all historical journals</div>
-        </div>
-        <div className={styles.statCard}>
-          <div className={styles.statLabel}>Conservation Delta</div>
-          <div className={styles.statValue} style={{ color: "#34d399" }}>
-            ₱0.00
-          </div>
-          <div className={styles.statSubtext}>Zero imbalance guarantee</div>
-        </div>
-        <div className={styles.statCard}>
-          <div className={styles.statLabel}>Chart of Accounts</div>
-          <div className={styles.statValue}>5 ACCOUNTS</div>
-          <div className={styles.statSubtext}>All in currency PHP (608)</div>
-        </div>
-      </div>
+      <MetricGrid>
+        <MetricCard
+          label="Sum of All Debits"
+          value="₱1,245,500.00"
+          metadata="Across all historical journals"
+        />
+        <MetricCard
+          label="Sum of All Credits"
+          value="₱1,245,500.00"
+          metadata="Across all historical journals"
+        />
+        <MetricCard
+          label="Conservation Delta"
+          value={<span style={{ color: "#166534" }}>₱0.00</span>}
+          metadata="Zero imbalance guarantee"
+        />
+        <MetricCard
+          label="Chart of Accounts"
+          value="5 ACCOUNTS"
+          metadata="All in ISO 4217 PHP (608)"
+        />
+      </MetricGrid>
 
+      {/* Chart of Accounts */}
       <div className={styles.card}>
         <div className={styles.cardHeader}>
           <h2 className={styles.cardTitle}>Chart of Accounts (payrail_private.accounts)</h2>
@@ -179,18 +171,20 @@ export default function LedgerPage() {
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>Account #</th>
-                <th>Account Name</th>
-                <th>Type</th>
-                <th>Current Balance</th>
-                <th>Status</th>
+                <th scope="col">Account #</th>
+                <th scope="col">Account Name</th>
+                <th scope="col">Type</th>
+                <th scope="col" className={styles.numCol}>
+                  Current Balance
+                </th>
+                <th scope="col">Status</th>
               </tr>
             </thead>
             <tbody>
               {accounts.map((acc) => (
                 <tr key={acc.number}>
                   <td>
-                    <b>{acc.number}</b>
+                    <strong>{acc.number}</strong>
                   </td>
                   <td>{acc.name}</td>
                   <td>
@@ -206,11 +200,11 @@ export default function LedgerPage() {
                       {acc.type}
                     </span>
                   </td>
-                  <td>
-                    <b>{acc.balance}</b>
+                  <td className={styles.numCol}>
+                    <Amount amountMinor={acc.balanceMinor} currency="PHP" align="right" />
                   </td>
                   <td>
-                    <span className={styles.badgeSuccess}>{acc.status}</span>
+                    <StatusBadge status="SUCCEEDED" customLabel={acc.status} />
                   </td>
                 </tr>
               ))}
@@ -219,62 +213,123 @@ export default function LedgerPage() {
         </div>
       </div>
 
+      {/* Journal Entries with Dedicated Debit and Credit Columns */}
       <div className={styles.card}>
         <div className={styles.cardHeader}>
           <h2 className={styles.cardTitle}>Journal Entries (payrail_private.journal_entries)</h2>
-          <span className={styles.badgePill}>ROW-LOCKED TRANSACTIONS</span>
+          <span className={styles.badgePill}>ATOMIC MULTI-LEGGED POSTINGS</span>
         </div>
-        <div className={styles.tableWrapper}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Journal ID</th>
-                <th>Timestamp</th>
-                <th>Description</th>
-                <th>Reference</th>
-                <th>Lines (Dr / Cr Breakdown)</th>
-                <th>Integrity</th>
-              </tr>
-            </thead>
-            <tbody>
-              {journalEntries.map((jnl) => (
-                <tr key={jnl.id}>
-                  <td>
-                    <code>{jnl.id}</code>
-                  </td>
-                  <td>{jnl.timestamp}</td>
-                  <td>
-                    <b>{jnl.description}</b>
-                  </td>
-                  <td>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          {journalEntries.map((jnl) => {
+            const totalDebit = jnl.lines.reduce((acc, l) => acc + (l.debit || 0), 0);
+            const totalCredit = jnl.lines.reduce((acc, l) => acc + (l.credit || 0), 0);
+            const isBalanced = totalDebit === totalCredit;
+
+            return (
+              <div
+                key={jnl.id}
+                style={{
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "8px",
+                  overflow: "hidden",
+                }}
+              >
+                {/* Journal Entry Header */}
+                <div
+                  style={{
+                    background: "#f8fafc",
+                    padding: "12px 16px",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    borderBottom: "1px solid #e2e8f0",
+                    flexWrap: "wrap",
+                    gap: "8px",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <code
+                      style={{
+                        fontSize: "12px",
+                        fontFamily: "ui-monospace, monospace",
+                        color: "#0f52ba",
+                      }}
+                    >
+                      {jnl.id}
+                    </code>
+                    <strong style={{ fontSize: "13px", color: "#0f172a" }}>
+                      {jnl.description}
+                    </strong>
+                    <span style={{ fontSize: "12px", color: "#64748b" }}>· {jnl.timestamp}</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                     <span className={styles.badgePill}>
                       {jnl.referenceType}: {jnl.referenceId}
                     </span>
-                  </td>
-                  <td>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                      {jnl.lines.map((ln, i) => (
-                        <div key={i} style={{ fontSize: "12px" }}>
-                          <span
-                            style={{
-                              color: ln.direction === "DEBIT" ? "#38bdf8" : "#fbbf24",
-                              fontWeight: 600,
-                            }}
-                          >
-                            {ln.direction}:
-                          </span>{" "}
-                          {ln.accountNumber} ({ln.accountName}) — <b>{ln.amount}</b>
-                        </div>
-                      ))}
-                    </div>
-                  </td>
-                  <td>
-                    <span className={styles.badgeSuccess}>✓ BALANCED</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    <StatusBadge
+                      status={isBalanced ? "SUCCEEDED" : "FAILED"}
+                      customLabel={isBalanced ? "BALANCED" : "IMBALANCED"}
+                    />
+                  </div>
+                </div>
+
+                {/* Journal Lines Table */}
+                <table className={styles.table} style={{ margin: 0 }}>
+                  <thead>
+                    <tr>
+                      <th scope="col" style={{ width: "120px" }}>
+                        Account #
+                      </th>
+                      <th scope="col">Account Name</th>
+                      <th scope="col" className={styles.numCol} style={{ width: "150px" }}>
+                        Debit (PHP)
+                      </th>
+                      <th scope="col" className={styles.numCol} style={{ width: "150px" }}>
+                        Credit (PHP)
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {jnl.lines.map((ln, idx) => (
+                      <tr key={idx}>
+                        <td>
+                          <code>{ln.accountNumber}</code>
+                        </td>
+                        <td>{ln.accountName}</td>
+                        <td className={styles.numCol}>
+                          {ln.debit !== null ? (
+                            <Amount amountMinor={ln.debit} currency="PHP" align="right" />
+                          ) : (
+                            <span style={{ color: "#94a3b8" }}>—</span>
+                          )}
+                        </td>
+                        <td className={styles.numCol}>
+                          {ln.credit !== null ? (
+                            <Amount amountMinor={ln.credit} currency="PHP" align="right" />
+                          ) : (
+                            <span style={{ color: "#94a3b8" }}>—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {/* Sum Footer */}
+                    <tr style={{ background: "#f8fafc", fontWeight: 700 }}>
+                      <td colSpan={2} style={{ textAlign: "right", color: "#475569" }}>
+                        Journal Totals:
+                      </td>
+                      <td className={styles.numCol}>
+                        <Amount amountMinor={totalDebit} currency="PHP" align="right" />
+                      </td>
+                      <td className={styles.numCol}>
+                        <Amount amountMinor={totalCredit} currency="PHP" align="right" />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

@@ -1,12 +1,22 @@
 :root {
   --color-paper: #fafaf7;
   --color-ink: #14233d;
-  --color-cobalt: #1854d8;
-  --color-cobalt-deep: #123eaa;
+  --color-cobalt: #0f52ba;
+  --color-cobalt-deep: #0c4196;
   --color-coral: #f26d61;
-  --color-muted: #657188;
-  --color-line: #d8dee8;
-  --font-display: var(--font-dm-serif-display), Georgia, serif;
+  --color-muted: #64748b;
+  --color-line: #e2e8f0;
+  --bg-canvas: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-subtle: #f1f5f9;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --border-subtle: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --brand-primary: #0f52ba;
+  --brand-hover: #0c4196;
+  --font-display: var(--font-dm-sans), Arial, sans-serif;
   --font-ui: var(--font-dm-sans), Arial, sans-serif;
 }
 
@@ -17,26 +27,34 @@
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 24px;
-  background: var(--color-paper);
+  background: var(--bg-canvas);
 }
 
 body {
   margin: 0;
-  color: var(--color-ink);
-  background: var(--color-paper);
+  color: var(--text-primary);
+  background: var(--bg-canvas);
   font-family: var(--font-ui);
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+}
+
+.tnum,
+[data-tnum="true"],
+code,
+pre {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
 }
 
 a {
   color: inherit;
 }
 
-a:focus-visible {
-  outline: 3px solid var(--color-cobalt);
-  outline-offset: 3px;
+:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
 }
 
 .page-gutter {
