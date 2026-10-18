@@ -1,6 +1,7 @@
 import Image from "next/image";
 import heroFlow from "../../public/images/payrail-verified-flow.jpg";
 import mountainHorizon from "../../public/images/payrail-mountain-horizon.jpg";
+import { QrPhPaymentFlow } from "../components/qrph-payment-flow";
 
 const steps = [
   {
@@ -119,6 +120,14 @@ export default function Home() {
             </span>
           </figcaption>
         </figure>
+      </section>
+
+      <section
+        className="page-gutter"
+        id="interactive-demo"
+        aria-label="Interactive QR Ph sandbox demonstration"
+      >
+        <QrPhPaymentFlow />
       </section>
 
       <section className="system-section page-gutter" id="system" aria-label="Payment lifecycle">
