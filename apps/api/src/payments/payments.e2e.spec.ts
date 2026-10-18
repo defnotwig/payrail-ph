@@ -3,6 +3,7 @@ import { DatabasePool } from "../database/database.pool";
 import { PayMongoAdapter } from "../paymongo/paymongo.adapter";
 import { PaymentsService } from "./payments.service";
 import { WebhooksService } from "../webhooks/webhooks.service";
+import { LedgerService } from "../ledger/ledger.service";
 import * as crypto from "node:crypto";
 
 describe("PayRail PH QR Ph Local End-to-End Payment Flow", () => {
@@ -16,6 +17,9 @@ describe("PayRail PH QR Ph Local End-to-End Payment Flow", () => {
     process.env.DATABASE_URL =
       process.env.DATABASE_URL || "postgresql://payrail@127.0.0.1:55432/payrail_local";
     process.env.WEB_ORIGIN = "http://localhost:3000";
+    process.env.SUPABASE_URL = "https://identity.example.test";
+    process.env.WEBHOOK_ENCRYPTION_KEY =
+      "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
     process.env.PAYMONGO_SECRET_KEY = "sk_test_placeholder";
     process.env.PAYMONGO_WEBHOOK_SECRET = "whsk_test_placeholder";
     process.env.PAYMENTS_MODE = "test";
@@ -31,8 +35,8 @@ describe("PayRail PH QR Ph Local End-to-End Payment Flow", () => {
     }
 
     adapter = new PayMongoAdapter();
-    paymentsService = new PaymentsService(pool, adapter);
-    webhooksService = new WebhooksService(pool, paymentsService);
+    paymentsService = new PaymentsService(pool, adapter, new LedgerService(pool));
+    webhooksService = new WebhooksService(pool, paymentsService, adapter);
   });
 
   afterAll(async () => {
@@ -55,6 +59,7 @@ describe("PayRail PH QR Ph Local End-to-End Payment Flow", () => {
     // 1. Create Payment
     const payment = await paymentsService.createQrPhPayment(
       {
+        merchantId: "merchant_default",
         amountMinor: "15000",
         currency: "PHP",
         orderNumber,
@@ -72,6 +77,7 @@ describe("PayRail PH QR Ph Local End-to-End Payment Flow", () => {
     // 2. Test Idempotency with exact same request -> returns same payment
     const replay = await paymentsService.createQrPhPayment(
       {
+        merchantId: "merchant_default",
         amountMinor: "15000",
         currency: "PHP",
         orderNumber,
@@ -87,6 +93,7 @@ describe("PayRail PH QR Ph Local End-to-End Payment Flow", () => {
     await expect(
       paymentsService.createQrPhPayment(
         {
+          merchantId: "merchant_default",
           amountMinor: "25000",
           currency: "PHP",
           orderNumber,
@@ -136,7 +143,7 @@ describe("PayRail PH QR Ph Local End-to-End Payment Flow", () => {
     expect(webhookResult.processed).toBe(true);
 
     // 5. Query payment from DB -> state must authoritatively be SUCCEEDED
-    const updatedPayment = await paymentsService.getPaymentIntent(payment.id);
+    const updatedPayment = await paymentsService.getPaymentIntent(payment.id, "merchant_default");
     expect(updatedPayment.state).toBe("SUCCEEDED");
 
     // 6. Webhook Deduplication Test: Deliver exact same webhook delivery again
@@ -149,7 +156,7 @@ describe("PayRail PH QR Ph Local End-to-End Payment Flow", () => {
     expect(duplicateDelivery.deduplicated).toBe(true);
 
     // State remains SUCCEEDED without regression or duplicate mutation
-    const finalPayment = await paymentsService.getPaymentIntent(payment.id);
+    const finalPayment = await paymentsService.getPaymentIntent(payment.id, "merchant_default");
     expect(finalPayment.state).toBe("SUCCEEDED");
   });
 });

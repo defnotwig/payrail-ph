@@ -41,6 +41,7 @@ describe("ReconciliationService", () => {
                 state: "SUCCEEDED",
                 provider_payment_id: "pay_1",
                 submission_state: "SUCCEEDED",
+                observation: { state: "SUCCEEDED", amountMinor: "10000", currency: "PHP" },
               },
             ],
           });
@@ -89,6 +90,7 @@ describe("ReconciliationService", () => {
                 state: "AWAITING_PAYMENT", // Local state was waiting for webhook
                 provider_payment_id: "pay_2",
                 submission_state: "SUCCEEDED", // Provider has succeeded
+                observation: { state: "SUCCEEDED", amountMinor: "15000", currency: "PHP" },
               },
             ],
           });
@@ -120,7 +122,7 @@ describe("ReconciliationService", () => {
       // Verify automatic safe repair transition to SUCCEEDED
       expect(mockClient.query).toHaveBeenCalledWith(
         expect.stringContaining("SET state = 'SUCCEEDED'"),
-        ["pi-missed-webhook"],
+        ["pi-missed-webhook", "AWAITING_PAYMENT"],
       );
 
       // Verify compensating ledger posting
@@ -137,6 +139,69 @@ describe("ReconciliationService", () => {
         expect.stringContaining("INSERT INTO payrail_private.reconciliation_items"),
         expect.arrayContaining(["STATUS_MISMATCH", "AUTO_REPAIRED"]),
       );
+    });
+
+    it("ensures repeated reconciliation runs are idempotent and produce no second financial effect", async () => {
+      let localState = "AWAITING_PAYMENT";
+      let ledgerPostings = 0;
+
+      mockLedgerService.postPaymentSuccess.mockImplementation(async () => {
+        ledgerPostings += 1;
+        return { id: "je-recon-1" };
+      });
+
+      mockClient.query.mockImplementation((sql: string) => {
+        if (sql.includes("SELECT \n           pi.id")) {
+          return Promise.resolve({
+            rows: [
+              {
+                id: "pi-repeated-recon",
+                merchant_id: "merchant_test",
+                amount_minor: "20000",
+                currency: "PHP",
+                state: localState,
+                provider_payment_id: "pay_rep_1",
+                submission_state: "SUCCEEDED",
+                observation: { state: "SUCCEEDED", amountMinor: "20000", currency: "PHP" },
+              },
+            ],
+          });
+        }
+        if (sql.includes("SET state = 'SUCCEEDED'")) {
+          localState = "SUCCEEDED";
+          return Promise.resolve({ rowCount: 1, rows: [] });
+        }
+        if (sql.includes("UPDATE payrail_private.reconciliation_runs")) {
+          return Promise.resolve({
+            rows: [
+              {
+                id: "run-rep",
+                merchant_id: "merchant_test",
+                started_at: new Date(),
+                completed_at: new Date(),
+                status: "COMPLETED",
+                total_records: 1,
+                matched_records: localState === "SUCCEEDED" ? 1 : 0,
+                discrepancy_records: localState === "SUCCEEDED" ? 0 : 1,
+                summary: {},
+              },
+            ],
+          });
+        }
+        return Promise.resolve({ rows: [] });
+      });
+
+      // Run 1: Repairs missed webhook and posts to ledger
+      const run1 = await service.runReconciliation("merchant_test");
+      expect(run1.status).toBe("COMPLETED");
+      expect(ledgerPostings).toBe(1);
+      expect(localState).toBe("SUCCEEDED");
+
+      // Run 2: Immediately re-run reconciliation
+      const run2 = await service.runReconciliation("merchant_test");
+      expect(run2.status).toBe("COMPLETED");
+      // Critical Invariant: Zero second ledger posting, zero second financial effect!
+      expect(ledgerPostings).toBe(1);
     });
   });
 });

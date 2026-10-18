@@ -50,6 +50,8 @@ Phase 07 provides an early integration demo; it does not complete M1 before dura
 
 The public repository is `https://github.com/defnotwig/payrail-ph`. The owner implementation branch is `personal/defnotwig`; verified work moves through `dev` → `staging` → `main` in pull requests. Each phase has one implementation PR; milestone releases are promoted from staging. `fix/*` branches use the same checks and are synchronized downstream after release. The first publication of the existing verified history is the documented empty-remote bootstrap exception; all later changes use PRs.
 
+For this PayMo qualification, only the three exact isolated branches `codex/paymo-financial`, `codex/paymo-product`, and `codex/paymo-security` may target `personal/defnotwig`. The PR workflow and policy validate their exact diff/review evidence; they do not authorize arbitrary `codex/*` branches. The integrated revision still follows the regular `personal/defnotwig` → `dev` → `staging` → `main` promotions.
+
 GitHub accepts merge commits only. CI validates Conventional Commit subjects, PR titles and promotion sources. Branch protections require current checks, resolved conversations, and an independent Codex review record bound to the exact PR base and binary diff digest. A change to the source diff invalidates its recorded review. The solo workflow does not require a second human approval.
 
 Keep the primary checkout on `main` and use the Codex-managed linked worktree for `personal/defnotwig`. Dev and staging use separate private schemas/roles in one nonproduction Supabase project; main uses its own Supabase project and Auth. Vercel deploys a separate web/API pair for each environment when actual free capacity and credentials allow. Cloudflare triggers recovery work only after that phase is ready.
@@ -79,3 +81,5 @@ PayMongo Phase 05 must verify QR creation/retrieval/test behavior, lookup, signa
 
 ## Phase evidence
 Every phase records revision, implementation, commands/results, external evidence, limitations, and next phase in harness/build-log.md. Label local simulation, genuine sandbox activity, and deployed evidence distinctly. Create a focused phase build file before implementation. Create ADRs alongside exercised decisions, not as upfront placeholders.
+
+Current qualification work adds PostgreSQL-backed checks for payment idempotency and webhook/state integrity, evidence-gated reconciliation, refund reservations, immutable balanced ledger postings, and worker claim-token fencing. Uncertain charge responses remain unresolved and a repeated idempotent request returns the existing operation; no provider failover is configured. Provider refunds remain fixture-only until a sandbox capability probe succeeds. A fee calculator exists only in test support and makes no claim about PayMongo fees.

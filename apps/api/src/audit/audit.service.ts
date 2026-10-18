@@ -63,14 +63,9 @@ export class AuditService {
   /**
    * Retrieves audit events for compliance review and forensic investigation.
    */
-  async getEvents(merchantId?: string, limit = 50): Promise<AuditEventRecord[]> {
-    let query = `SELECT * FROM payrail_private.audit_events`;
-    const params: unknown[] = [];
-
-    if (merchantId) {
-      query += ` WHERE merchant_id = $1 OR merchant_id IS NULL`;
-      params.push(merchantId);
-    }
+  async getEvents(merchantId: string, limit = 50): Promise<AuditEventRecord[]> {
+    let query = `SELECT * FROM payrail_private.audit_events WHERE merchant_id = $1`;
+    const params: unknown[] = [merchantId];
 
     query += ` ORDER BY created_at DESC LIMIT $${params.length + 1}`;
     params.push(limit);

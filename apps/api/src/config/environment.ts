@@ -7,10 +7,23 @@ const environmentSchema = z.object({
     .url()
     .refine((value) => ["postgres:", "postgresql:"].includes(new URL(value).protocol)),
   WEB_ORIGIN: z.string().url(),
-  PAYMONGO_SECRET_KEY: z.string().default("sk_test_placeholder"),
-  PAYMONGO_WEBHOOK_SECRET: z.string().default("whsk_test_placeholder"),
+  SUPABASE_URL: z
+    .string()
+    .url()
+    .refine(
+      (value) => new URL(value).protocol === "https:" || new URL(value).hostname === "localhost",
+    ),
+  APP_ENV: z.enum(["local", "test", "staging", "production"]).default("local"),
+  WEBHOOK_ENCRYPTION_KEY: z.string().regex(/^[a-fA-F0-9]{64}$/),
+  PAYMONGO_SECRET_KEY: z
+    .string()
+    .min(8)
+    .regex(/^sk_test_/),
+  PAYMONGO_WEBHOOK_SECRET: z
+    .string()
+    .min(8)
+    .regex(/^whsk_test_/),
   PAYMENTS_MODE: z.enum(["test"]).default("test"),
-  INTERNAL_SERVICE_SECRET: z.string().default("dev_internal_secret"),
 });
 
 export type Environment = z.infer<typeof environmentSchema>;

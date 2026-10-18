@@ -1,14 +1,15 @@
-import { Controller, Get, Query, Headers } from "@nestjs/common";
-import type { AuditService } from "./audit.service";
-
+import { Controller, Get, Query, Inject, Req } from "@nestjs/common";
+import { ApiBearerAuth } from "@nestjs/swagger";
+import { AuditService } from "./audit.service";
+import { Permissions, type OperatorRequest } from "../auth/authorization";
+import { pageLimit } from "../auth/validation";
 @Controller("audit")
+@ApiBearerAuth()
 export class AuditController {
-  constructor(private readonly auditService: AuditService) {}
-
+  constructor(@Inject(AuditService) private readonly audit: AuditService) {}
   @Get("events")
-  async getEvents(@Headers("x-merchant-id") merchantId?: string, @Query("limit") limit = "50") {
-    const parsedLimit = Math.min(Math.max(Number.parseInt(limit, 10) || 50, 1), 100);
-    const events = await this.auditService.getEvents(merchantId, parsedLimit);
-    return { data: events };
+  @Permissions("audit:read")
+  async getEvents(@Req() request: OperatorRequest, @Query("limit") limit?: string) {
+    return { data: await this.audit.getEvents(request.user.merchantId, pageLimit(limit)) };
   }
 }

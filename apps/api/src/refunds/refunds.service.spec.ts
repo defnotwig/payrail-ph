@@ -24,7 +24,10 @@ describe("RefundsService", () => {
     mockLedgerService = {
       postRefund: vi.fn().mockResolvedValue({ id: "je-ref-1" }),
     };
-    mockPayMongoAdapter = {};
+    mockPayMongoAdapter = {
+      assertRefundAvailable: vi.fn(),
+      createRefund: vi.fn().mockResolvedValue({ providerRefundId: "ref_paymongo_123" }),
+    };
     service = new RefundsService(
       mockDb as unknown as DatabasePool,
       mockLedgerService as unknown as LedgerService,
@@ -166,11 +169,10 @@ describe("RefundsService", () => {
   describe("Idempotency Invariant", () => {
     it("detects payload mismatch and throws 409 Conflict", async () => {
       mockClient.query.mockImplementation((sql: string) => {
-        if (sql.includes("SELECT id, request_fingerprint")) {
+        if (sql.includes("FROM payrail_private.idempotency_records")) {
           return Promise.resolve({
             rows: [
               {
-                id: "idem-rec-1",
                 request_fingerprint: "different_hash_value",
                 result_reference: "ref-1",
                 status: "SUCCESS",
