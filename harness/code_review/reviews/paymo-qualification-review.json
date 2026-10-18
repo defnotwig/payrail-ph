@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 2,
+  "reviewedBaseSha": "572105d872208175464867c204bb72ba5435972c",
+  "reviewedDiffSha256": "9d8679b467b98c2ef5de507bb80c12ddd87dd8824f04d7b8ef38ea0ea73dc6f6",
+  "reviewer": "codex-subagent/independent-review",
+  "reviewSource": "separate-agent-review",
+  "reviewReport": "paymo-qualification-review.md",
+  "reviewReportSha256": "ef8645af130124b907e8cfa343def148c89412ee34a13a7376fa91b57d6bdf87",
+  "reviewedAt": "2026-10-18T15:26:00Z",
+  "verdict": "approve",
+  "findings": []
+}
