@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 2,
+  "reviewedBaseSha": "c5b14cd567cea0000bb7c4f396e2dff23a610c10",
+  "reviewedDiffSha256": "602fffeaea590c10a3339685983e2f2695ef0bc742ed493d30d4947b82840202",
+  "reviewer": "codex-subagent/independent-review",
+  "reviewSource": "separate-agent-review",
+  "reviewReport": "fintech-ops-staging-promotion-review.md",
+  "reviewReportSha256": "3a60968f3968984edb4597bb73ad9f4ffb3c21a4fc6275d6cec1a47c9c00bc80",
+  "reviewedAt": "2026-10-18T14:00:00Z",
+  "verdict": "approve",
+  "findings": []
+}
