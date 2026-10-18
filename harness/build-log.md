@@ -22,3 +22,17 @@ Record factual evidence by phase. Label each item as local simulation, genuine p
 - Limitations: Docker engine unavailable; the isolated local PostgreSQL cluster is the supported local path. M0 remains incomplete because money primitives, authentication, and merchant isolation belong to later phases.
 - Implementation commit: 50b9a4d (`feat: add runnable PayRail PH foundation`).
 - Next: Phase 02 — money and SQL primitives.
+
+## Phase 01A — Public repository and delivery bootstrap
+- Status: IN PROGRESS
+- Date: 2026-10-18
+- Scope: public GitHub repository, original history publication, requested branches, contributor/security guidance, MIT licensing, Conventional Commit and promotion validation, exact-diff review evidence, and protected merge-commit CI.
+- Public repository: `https://github.com/defnotwig/payrail-ph`; `main` is the default branch. Initial publication preserved the existing three commits and recorded this empty-remote bootstrap exception.
+- Branches `personal/defnotwig`, `dev`, `staging`, and `main` were all created from `75386a231e060f81b0ea4e8959fa92ca5c36ef96` and published.
+- Prepublication secret scan: Gitleaks 8.30.1 scanned all three reachable commits and the committed source tree; no leaks were found. Eight generic-key matches in ignored `.next` build metadata were not tracked and were excluded from the committed-source scan.
+- Initial GitHub CI runs passed on all four branches at the verified foundation: [main](https://github.com/defnotwig/payrail-ph/actions/runs/39106239947), [personal](https://github.com/defnotwig/payrail-ph/actions/runs/39106240096), [dev](https://github.com/defnotwig/payrail-ph/actions/runs/39106240448), and [staging](https://github.com/defnotwig/payrail-ph/actions/runs/39106240779).
+- GitHub repository settings were verified: merge commits enabled; squash, rebase, and branch deletion disabled; `main` remains default. Branch protections on `dev`, `staging`, and `main` require PRs, strict `verify` and `review-evidence`, resolved conversations, and enforce administrator rules; force pushes and deletion are disabled. The selected solo process has no required second-human approval.
+- PR #1 (`personal/defnotwig` → `dev`) is open. Independent Codex review evidence is recorded under `harness/code_review/reviews/`. At head `20a46fc649ab2f15f07641008e887fa7e542efcb`, GitHub CI run [39108170485](https://github.com/defnotwig/payrail-ph/actions/runs/39108170485) passed both required PR checks. Later documentation and runner-pin updates require a fresh run before merge.
+- Hosted deployment and provider capability audits remain pending; no genuine PayMongo sandbox activity has occurred.
+- Evidence type: repository-hosting/CI evidence and local source scan. No genuine provider sandbox activity or Vercel/Supabase deployment has occurred.
+- Next: finish the current PR documentation review and CI, merge to `dev`, then promote to `staging` and `main` using protected merge-commit PRs.
