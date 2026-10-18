@@ -12,9 +12,23 @@ async function bootstrap() {
   }
 
   const environment = parseEnvironment(process.env);
-  const app = await NestFactory.create(AppModule, { logger: ["error", "warn"] });
+  const app = await NestFactory.create(AppModule, {
+    logger: ["error", "warn"],
+    rawBody: true,
+  });
   app.enableShutdownHooks();
-  app.enableCors({ origin: environment.WEB_ORIGIN, methods: ["GET"], credentials: false });
+  app.enableCors({
+    origin: environment.WEB_ORIGIN,
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type",
+      "Idempotency-Key",
+      "idempotency-key",
+      "Authorization",
+      "paymongo-signature",
+    ],
+    credentials: false,
+  });
   await app.listen(environment.API_PORT, "0.0.0.0");
 }
 
