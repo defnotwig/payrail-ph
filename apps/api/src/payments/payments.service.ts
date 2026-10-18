@@ -65,10 +65,10 @@ export const paymentTransitions: Record<PaymentState, PaymentState[]> = {
 
 export interface CreatePaymentDto {
   amountMinor: string;
-  currency?: string;
-  orderNumber?: string;
-  description?: string;
-  merchantId?: string;
+  currency?: string | undefined;
+  orderNumber?: string | undefined;
+  description?: string | undefined;
+  merchantId?: string | undefined;
 }
 
 export interface PaymentIntentView {
@@ -377,6 +377,49 @@ export class PaymentsService {
       createdAt: row.created_at.toISOString(),
       updatedAt: row.updated_at.toISOString(),
     };
+  }
+
+  async listPaymentIntents(merchantId: string, limit = 50): Promise<PaymentIntentView[]> {
+    const result = await this.pool.query<{
+      id: string;
+      merchant_id: string;
+      order_id: string;
+      amount_minor: string;
+      currency: string;
+      state: PaymentState;
+      provider: string;
+      payment_method: string;
+      order_number: string;
+      provider_payment_id: string | null;
+      created_at: Date;
+      updated_at: Date;
+    }>(
+      `SELECT DISTINCT ON (pi.id) pi.id, pi.merchant_id, pi.order_id, pi.amount_minor, pi.currency,
+              pi.state, pi.provider, pi.payment_method, pi.created_at, pi.updated_at,
+              o.order_number, pa.provider_payment_id
+       FROM payrail_private.payment_intents pi
+       JOIN payrail_private.orders o ON o.id = pi.order_id
+       LEFT JOIN payrail_private.payment_attempts pa ON pa.payment_intent_id = pi.id
+       WHERE pi.merchant_id = $1
+       ORDER BY pi.id, pi.created_at DESC
+       LIMIT $2`,
+      [merchantId, limit],
+    );
+
+    return result.rows.map((row) => ({
+      id: row.id,
+      merchantId: row.merchant_id,
+      orderId: row.order_id,
+      orderNumber: row.order_number,
+      amountMinor: row.amount_minor,
+      currency: row.currency,
+      state: row.state,
+      provider: row.provider,
+      paymentMethod: row.payment_method,
+      providerPaymentIntentId: row.provider_payment_id ?? undefined,
+      createdAt: row.created_at.toISOString(),
+      updatedAt: row.updated_at.toISOString(),
+    }));
   }
 
   async applyGuardedTransition(

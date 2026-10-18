@@ -16,6 +16,9 @@ describe("PayRail PH QR Ph Local End-to-End Payment Flow", () => {
     process.env.DATABASE_URL =
       process.env.DATABASE_URL || "postgresql://payrail@127.0.0.1:55432/payrail_local";
     process.env.WEB_ORIGIN = "http://localhost:3000";
+    process.env.SUPABASE_URL = "https://identity.example.test";
+    process.env.WEBHOOK_ENCRYPTION_KEY =
+      "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
     process.env.PAYMONGO_SECRET_KEY = "sk_test_placeholder";
     process.env.PAYMONGO_WEBHOOK_SECRET = "whsk_test_placeholder";
     process.env.PAYMENTS_MODE = "test";

@@ -1,114 +1,127 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
+import { ForbiddenException, UnauthorizedException } from "@nestjs/common";
+import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
+import type { DatabasePool } from "../database/database.pool";
 import { AuthService } from "./auth.service";
-import { RolesGuard } from "./roles.guard";
-import { UnauthorizedException, ForbiddenException, type ExecutionContext } from "@nestjs/common";
-import { Reflector } from "@nestjs/core";
 
-describe("AuthService & RBAC", () => {
-  let authService: AuthService;
+const subject = "b1111111-1111-4111-8111-111111111111";
+const membership = {
+  merchant_id: "merchant_a",
+  role: "VIEWER" as const,
+  permissions: ["payments:read"],
+};
+let auth: AuthService;
+let privateKey: CryptoKey;
 
-  beforeEach(() => {
-    authService = new AuthService();
+async function token(
+  overrides: Record<string, unknown> = {},
+  issuer = "https://identity.example.test/auth/v1",
+  audience: string | string[] = "authenticated",
+) {
+  return new SignJWT({
+    email: "operator@example.test",
+    role: "authenticated",
+    session_id: subject,
+    ...overrides,
+  })
+    .setProtectedHeader({ alg: "ES256", kid: "fixture" })
+    .setSubject(subject)
+    .setIssuer(issuer)
+    .setAudience(audience)
+    .setIssuedAt()
+    .setExpirationTime("5m")
+    .sign(privateKey);
+}
+
+describe("Supabase operator identity and database authorization", () => {
+  beforeAll(async () => {
+    process.env.SUPABASE_URL = "https://identity.example.test";
+    const pair = await generateKeyPair("ES256");
+    privateKey = pair.privateKey;
+    const jwk = await exportJWK(pair.publicKey);
+    jwk.kid = "fixture";
+    jwk.alg = "ES256";
+    const pool = {
+      query: async (_sql: string, values: unknown[]) => ({
+        rows: values[1] === "merchant_b" ? [] : [membership],
+      }),
+    } as unknown as DatabasePool;
+    auth = new AuthService(pool, createLocalJWKSet({ keys: [jwk] }));
   });
 
-  describe("Token Generation & Verification", () => {
-    it("generates and verifies a tamper-resistant session token", () => {
-      const token = authService.generateSessionToken(
-        "usr_123",
-        "finance@payrail.ph",
-        "FINANCE",
-        "merchant_default",
-      );
-
-      const payload = authService.verifySessionToken(token);
-      expect(payload.userId).toBe("usr_123");
-      expect(payload.email).toBe("finance@payrail.ph");
-      expect(payload.role).toBe("FINANCE");
-      expect(payload.merchantId).toBe("merchant_default");
-    });
-
-    it("rejects token with tampered payload", () => {
-      const token = authService.generateSessionToken("usr_123", "viewer@payrail.ph", "VIEWER");
-
-      const [serialized, signature] = token.split(".");
-      if (!serialized || !signature) {
-        throw new Error("Expected token to have serialized and signature parts");
-      }
-      // Tamper with payload to elevate role to ADMIN
-      const tamperedObj = JSON.parse(Buffer.from(serialized, "base64url").toString());
-      tamperedObj.role = "ADMIN";
-      const tamperedSerialized = Buffer.from(JSON.stringify(tamperedObj)).toString("base64url");
-      const tamperedToken = `${tamperedSerialized}.${signature}`;
-
-      expect(() => authService.verifySessionToken(tamperedToken)).toThrow(UnauthorizedException);
-    });
-
-    it("rejects expired token", () => {
-      // Token expired 1 hour ago
-      const token = authService.generateSessionToken(
-        "usr_123",
-        "test@payrail.ph",
-        "VIEWER",
-        "merchant_default",
-        -1, // -1 hour duration
-      );
-
-      expect(() => authService.verifySessionToken(token)).toThrow(UnauthorizedException);
-    });
-
-    it("rejects malformed token strings", () => {
-      expect(() => authService.verifySessionToken("invalid-token-without-dot")).toThrow(
-        UnauthorizedException,
-      );
+  it("verifies the signed token and resolves role, permissions, and merchant from PostgreSQL", async () => {
+    const result = await auth.verifyAccessToken(
+      await token({ user_metadata: { role: "ADMIN", merchantId: "merchant_b" } }),
+    );
+    expect(result).toEqual({
+      userId: subject,
+      email: "operator@example.test",
+      merchantId: "merchant_a",
+      role: "VIEWER",
+      permissions: ["payments:read"],
+      actorType: "OPERATOR",
     });
   });
 
-  describe("RolesGuard Authorization", () => {
-    let reflector: Reflector;
-    let rolesGuard: RolesGuard;
+  it("uses x-merchant-id only to select an existing membership", async () => {
+    await expect(auth.verifyAccessToken(await token(), "merchant_b")).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
 
-    beforeEach(() => {
-      reflector = new Reflector();
-      rolesGuard = new RolesGuard(reflector);
-    });
+  it("rejects wrong issuer, audience, signature, expiry, and missing identity claims", async () => {
+    const good = await token();
+    for (const bad of [
+      await token({}, "https://attacker.example/auth/v1"),
+      await token({}, "https://identity.example.test/auth/v1", "service_role"),
+      await token({ session_id: undefined }),
+      `${good.slice(0, -8)}AAAAAAAA`,
+      await new SignJWT({
+        email: "operator@example.test",
+        role: "authenticated",
+        session_id: subject,
+      })
+        .setProtectedHeader({ alg: "ES256", kid: "fixture" })
+        .setSubject(subject)
+        .setIssuer("https://identity.example.test/auth/v1")
+        .setAudience("authenticated")
+        .setIssuedAt()
+        .setExpirationTime("-1s")
+        .sign(privateKey),
+    ]) {
+      await expect(auth.verifyAccessToken(bad)).rejects.toThrow(UnauthorizedException);
+    }
+  });
 
-    it("permits user possessing required role", () => {
-      vi.spyOn(reflector, "getAllAndOverride").mockReturnValue(["FINANCE", "ADMIN"]);
-      const mockContext = {
-        getHandler: vi.fn(),
-        getClass: vi.fn(),
-        switchToHttp: () => ({
-          getRequest: () => ({ user: { role: "FINANCE" } }),
-        }),
-      } as unknown as ExecutionContext;
-
-      expect(rolesGuard.canActivate(mockContext)).toBe(true);
-    });
-
-    it("permits ADMIN user even if specific role is FINANCE", () => {
-      vi.spyOn(reflector, "getAllAndOverride").mockReturnValue(["FINANCE"]);
-      const mockContext = {
-        getHandler: vi.fn(),
-        getClass: vi.fn(),
-        switchToHttp: () => ({
-          getRequest: () => ({ user: { role: "ADMIN" } }),
-        }),
-      } as unknown as ExecutionContext;
-
-      expect(rolesGuard.canActivate(mockContext)).toBe(true);
-    });
-
-    it("throws ForbiddenException if user lacks required role", () => {
-      vi.spyOn(reflector, "getAllAndOverride").mockReturnValue(["FINANCE"]);
-      const mockContext = {
-        getHandler: vi.fn(),
-        getClass: vi.fn(),
-        switchToHttp: () => ({
-          getRequest: () => ({ user: { role: "VIEWER" } }),
-        }),
-      } as unknown as ExecutionContext;
-
-      expect(() => rolesGuard.canActivate(mockContext)).toThrow(ForbiddenException);
-    });
+  it("rejects when no current active membership resolves", async () => {
+    const noMembership = new AuthService(
+      { query: async () => ({ rows: [] }) } as unknown as DatabasePool,
+      createLocalJWKSet({ keys: [await exportJWK((await generateKeyPair("ES256")).publicKey)] }),
+    );
+    // A valid token must use the matching verification key; database misses remain an authorization denial.
+    const pair = await generateKeyPair("ES256");
+    const jwk = await exportJWK(pair.publicKey);
+    jwk.kid = "fixture";
+    jwk.alg = "ES256";
+    const verifiedService = new AuthService(
+      { query: async () => ({ rows: [] }) } as unknown as DatabasePool,
+      createLocalJWKSet({ keys: [jwk] }),
+    );
+    const identityToken = await new SignJWT({
+      email: "operator@example.test",
+      role: "authenticated",
+      session_id: subject,
+    })
+      .setProtectedHeader({ alg: "ES256", kid: "fixture" })
+      .setSubject(subject)
+      .setIssuer("https://identity.example.test/auth/v1")
+      .setAudience("authenticated")
+      .setIssuedAt()
+      .setExpirationTime("5m")
+      .sign(pair.privateKey);
+    await expect(verifiedService.verifyAccessToken(identityToken)).rejects.toThrow(
+      ForbiddenException,
+    );
+    expect(noMembership).toBeTruthy();
   });
 });

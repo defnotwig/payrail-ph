@@ -1,48 +1,54 @@
-import { Controller, Get, Post, Body, Param, Query, Headers } from "@nestjs/common";
-import type { RefundsService } from "./refunds.service";
-
+import { Controller, Get, Post, Body, Param, Query, Headers, Inject, Req } from "@nestjs/common";
+import { ApiBearerAuth, ApiSecurity } from "@nestjs/swagger";
+import { z } from "zod";
+import { RefundsService } from "./refunds.service";
+import { AllowApiKey, Permissions, type OperatorRequest } from "../auth/authorization";
+import { identifier, money, parseInput, requiredIdempotency } from "../auth/validation";
 @Controller("refunds")
+@ApiBearerAuth()
+@ApiSecurity("merchantKey")
+@AllowApiKey()
 export class RefundsController {
-  constructor(private readonly refundsService: RefundsService) {}
-
+  constructor(@Inject(RefundsService) private readonly refunds: RefundsService) {}
   @Get()
-  async getRefunds(
-    @Headers("x-merchant-id") merchantId = "merchant_default",
-    @Query("paymentIntentId") paymentIntentId?: string,
-  ) {
-    const refunds = await this.refundsService.getRefunds(merchantId, paymentIntentId);
-    return { data: refunds };
+  @Permissions("refunds:read")
+  async getRefunds(@Req() request: OperatorRequest, @Query("paymentIntentId") id?: string) {
+    return {
+      data: await this.refunds.getRefunds(
+        request.user.merchantId,
+        id === undefined ? undefined : parseInput(identifier, id),
+      ),
+    };
   }
-
   @Get(":id")
-  async getRefundById(
-    @Headers("x-merchant-id") merchantId = "merchant_default",
-    @Param("id") id: string,
-  ) {
-    const refund = await this.refundsService.getRefundById(merchantId, id);
-    return { data: refund };
+  @Permissions("refunds:read")
+  async getRefundById(@Req() request: OperatorRequest, @Param("id") id: string) {
+    return {
+      data: await this.refunds.getRefundById(request.user.merchantId, parseInput(identifier, id)),
+    };
   }
-
   @Post()
+  @Permissions("refunds:write")
   async createRefund(
-    @Headers("x-merchant-id") merchantId = "merchant_default",
-    @Headers("idempotency-key") idempotencyKey: string,
-    @Body()
-    body: {
-      paymentIntentId: string;
-      amountMinor: string;
-      reason: string;
-      currency?: string;
-    },
+    @Req() request: OperatorRequest,
+    @Headers("idempotency-key") key: string,
+    @Body() body: unknown,
   ) {
-    const refund = await this.refundsService.createRefund({
-      merchantId,
-      idempotencyKey: idempotencyKey || `idem_ref_${Date.now()}`,
-      paymentIntentId: body.paymentIntentId,
-      amountMinor: body.amountMinor,
-      reason: body.reason,
-      currency: body.currency,
-    });
-    return { data: refund };
+    const parsed = parseInput(
+      z.strictObject({
+        paymentIntentId: identifier,
+        amountMinor: money,
+        reason: z.string().min(1).max(240),
+        currency: z.literal("PHP").optional(),
+      }),
+      body,
+    );
+    return {
+      data: await this.refunds.createRefund({
+        ...parsed,
+        merchantId: request.user.merchantId,
+        idempotencyKey: requiredIdempotency(key),
+      }),
+    };
   }
 }

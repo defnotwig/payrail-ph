@@ -1,79 +1,143 @@
-import { Controller, Get, Post, Delete, Body, Param, Query, Headers } from "@nestjs/common";
-import type { MerchantKeysService } from "./merchant-keys.service";
-import type { MerchantWebhooksService } from "./merchant-webhooks.service";
-
+import { Controller, Get, Post, Delete, Body, Param, Query, Inject, Req } from "@nestjs/common";
+import { ApiBearerAuth } from "@nestjs/swagger";
+import { z } from "zod";
+import { MerchantKeysService } from "./merchant-keys.service";
+import { MerchantWebhooksService } from "./merchant-webhooks.service";
+import { Permissions, type OperatorRequest } from "../auth/authorization";
+import { pageLimit, parseInput } from "../auth/validation";
+import { AuditService } from "../audit/audit.service";
 @Controller("v1")
+@ApiBearerAuth()
 export class MerchantApiController {
   constructor(
-    private readonly keysService: MerchantKeysService,
-    private readonly webhooksService: MerchantWebhooksService,
+    @Inject(MerchantKeysService) private readonly keys: MerchantKeysService,
+    @Inject(MerchantWebhooksService) private readonly webhooks: MerchantWebhooksService,
+    @Inject(AuditService) private readonly audit: AuditService,
   ) {}
-
-  // 1. Merchant API Keys
   @Get("api-keys")
-  async listKeys(@Headers("x-merchant-id") merchantId = "merchant_default") {
-    const keys = await this.keysService.listApiKeys(merchantId);
-    return { data: keys };
+  @Permissions("keys:read")
+  async listKeys(@Req() request: OperatorRequest) {
+    return { data: await this.keys.listApiKeys(request.user.merchantId) };
   }
-
   @Post("api-keys")
-  async createKey(
-    @Headers("x-merchant-id") merchantId = "merchant_default",
-    @Body()
-    body: {
-      name: string;
-      scopes?: string[];
-      environment?: "test" | "live";
-      keyType?: "public" | "secret";
-    },
-  ) {
-    const result = await this.keysService.createApiKey({
-      merchantId,
-      name: body.name,
-      scopes: body.scopes,
-      environment: body.environment,
-      keyType: body.keyType,
+  @Permissions("keys:write")
+  async createKey(@Req() request: OperatorRequest, @Body() body: unknown) {
+    const parsed = parseInput(
+      z.strictObject({
+        name: z.string().min(1).max(100),
+        scopes: z
+          .array(z.enum(["payments:read", "payments:write", "refunds:read", "refunds:write"]))
+          .min(1)
+          .max(4)
+          .optional(),
+        environment: z.literal("test").optional(),
+        keyType: z.literal("secret").optional(),
+      }),
+      body,
+    );
+    const created = await this.keys.createApiKey({
+      ...parsed,
+      merchantId: request.user.merchantId,
     });
-    return { data: result };
+    try {
+      await this.audit.recordEvent({
+        merchantId: request.user.merchantId,
+        actorType: request.user.actorType,
+        actorId: request.user.userId,
+        action: "API_KEY_CREATED",
+        resourceType: "merchant_api_key",
+        resourceId: created.id,
+        metadata: { name: created.name, scopes: created.scopes, environment: created.environment },
+      });
+    } catch (error) {
+      await this.keys.revokeApiKey(request.user.merchantId, created.id);
+      throw error;
+    }
+    return { data: created };
   }
-
   @Delete("api-keys/:id")
-  async revokeKey(
-    @Headers("x-merchant-id") merchantId = "merchant_default",
-    @Param("id") id: string,
-  ) {
-    await this.keysService.revokeApiKey(merchantId, id);
-    return { message: `API key '${id}' has been revoked successfully.` };
-  }
-
-  // 2. Outbound Webhooks
-  @Get("webhooks/endpoints")
-  async listEndpoints(@Headers("x-merchant-id") merchantId = "merchant_default") {
-    const endpoints = await this.webhooksService.listEndpoints(merchantId);
-    return { data: endpoints };
-  }
-
-  @Post("webhooks/endpoints")
-  async registerEndpoint(
-    @Headers("x-merchant-id") merchantId = "merchant_default",
-    @Body()
-    body: {
-      url: string;
-      subscribedEvents: string[];
-    },
-  ) {
-    const endpoint = await this.webhooksService.registerEndpoint({
-      merchantId,
-      url: body.url,
-      subscribedEvents: body.subscribedEvents,
+  @Permissions("keys:write")
+  async revokeKey(@Req() request: OperatorRequest, @Param("id") id: string) {
+    const keyId = parseInput(z.uuid(), id);
+    await this.keys.revokeApiKey(request.user.merchantId, keyId);
+    await this.audit.recordEvent({
+      merchantId: request.user.merchantId,
+      actorType: request.user.actorType,
+      actorId: request.user.userId,
+      action: "API_KEY_REVOKED",
+      resourceType: "merchant_api_key",
+      resourceId: keyId,
     });
-    return { data: endpoint };
+    return { message: "API key revoked." };
   }
-
+  @Get("webhooks/endpoints")
+  @Permissions("webhooks:read")
+  async listEndpoints(@Req() request: OperatorRequest) {
+    return { data: await this.webhooks.listEndpoints(request.user.merchantId) };
+  }
+  @Post("webhooks/endpoints")
+  @Permissions("webhooks:write")
+  async registerEndpoint(@Req() request: OperatorRequest, @Body() body: unknown) {
+    const parsed = parseInput(
+      z.strictObject({
+        url: z.url().max(2048),
+        subscribedEvents: z
+          .array(
+            z.enum(["payment.succeeded", "payment.failed", "refund.succeeded", "refund.failed"]),
+          )
+          .min(1)
+          .max(4),
+      }),
+      body,
+    );
+    const created = await this.webhooks.registerEndpoint({
+      ...parsed,
+      merchantId: request.user.merchantId,
+    });
+    try {
+      await this.audit.recordEvent({
+        merchantId: request.user.merchantId,
+        actorType: request.user.actorType,
+        actorId: request.user.userId,
+        action: "WEBHOOK_ENDPOINT_CREATED",
+        resourceType: "merchant_webhook_endpoint",
+        resourceId: created.id,
+        metadata: { url: created.url, subscribedEvents: created.subscribedEvents },
+      });
+    } catch (error) {
+      await this.webhooks.deactivateEndpoint(request.user.merchantId, created.id);
+      throw error;
+    }
+    return { data: created };
+  }
+  @Delete("webhooks/endpoints/:id")
+  @Permissions("webhooks:write")
+  async revokeEndpoint(@Req() request: OperatorRequest, @Param("id") id: string) {
+    const endpointId = parseInput(z.uuid(), id);
+    await this.webhooks.deactivateEndpoint(request.user.merchantId, endpointId);
+    await this.audit.recordEvent({
+      merchantId: request.user.merchantId,
+      actorType: request.user.actorType,
+      actorId: request.user.userId,
+      action: "WEBHOOK_ENDPOINT_DEACTIVATED",
+      resourceType: "merchant_webhook_endpoint",
+      resourceId: endpointId,
+    });
+    return { message: "Webhook endpoint deactivated." };
+  }
   @Get("webhooks/deliveries")
-  async listDeliveries(@Query("endpointId") endpointId?: string, @Query("limit") limit = "50") {
-    const parsedLimit = Math.min(Math.max(Number.parseInt(limit, 10) || 50, 1), 100);
-    const deliveries = await this.webhooksService.getDeliveries(endpointId, parsedLimit);
-    return { data: deliveries };
+  @Permissions("webhooks:read")
+  async listDeliveries(
+    @Req() request: OperatorRequest,
+    @Query("endpointId") id?: string,
+    @Query("limit") limit?: string,
+  ) {
+    return {
+      data: await this.webhooks.getDeliveries(
+        request.user.merchantId,
+        id === undefined ? undefined : parseInput(z.uuid(), id),
+        pageLimit(limit),
+      ),
+    };
   }
 }

@@ -13,6 +13,7 @@
     "lint": "biome lint apps/api/src apps/web/src packages/database/src scripts",
     "typecheck": "pnpm -r --if-present typecheck",
     "test:unit": "pnpm --filter @payrail/api test:unit",
+    "test:security-http": "pnpm --filter @payrail/api build && node --test scripts/security-http.test.mjs",
     "test:repo-policy": "node --test scripts/repo-policy.test.mjs scripts/review-evidence.test.mjs",
     "validate:commits": "node scripts/repo-policy.mjs",
     "review:evidence": "node scripts/review-evidence.mjs",

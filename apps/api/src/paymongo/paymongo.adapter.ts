@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, Optional } from "@nestjs/common";
 import * as crypto from "node:crypto";
 
 export interface QrPhPaymentResult {
@@ -35,7 +35,7 @@ export class PayMongoAdapter {
   private readonly secretKey: string;
   private readonly baseUrl = "https://api.paymongo.com/v1";
 
-  constructor(secretKey?: string) {
+  constructor(@Optional() secretKey?: string) {
     this.secretKey = secretKey || process.env.PAYMONGO_SECRET_KEY || "sk_test_placeholder";
   }
 
