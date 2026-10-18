@@ -27,6 +27,7 @@ Phase 07 provides an early integration demo; it does not complete M1 before dura
 |---|---|---|
 | 00 | Lightweight operating documents and evidence format | Financial constraints and next step are clear. |
 | 01 | Runnable pnpm monorepo, web/API health routes, environment validation, checksum-verified SQL migrations, isolated PostgreSQL, CI skeleton | Clean install, typecheck, build, migration setup, health/readiness. |
+| 01A | Public repository bootstrap, README/license/contribution policy, four-branch promotion flow, protected merge-commit workflow, exact-diff review evidence, and trusted-branch CI | Public history secret scan; all four branches retain the verified foundation; CI passes; PR promotion and branch protections are verified. Hosted foundations are reported only when actually deployed. |
 | 02 | PHP money/currency, allocation, SQL transaction helper, merchant/order foundation | Property, round-trip, invalid-input, rollback, and constraint tests. |
 | 03 | Supabase operator sessions, membership authorization, permission matrix, restricted DB roles | Cross-merchant, role, forged/expired session, and browser-access tests. M0. |
 | 04 | Payment intents/attempts, exact transitions, request fingerprints, idempotency, durable submission records | Concurrent same-key requests create one operation; conflict and unknown-attempt protections pass. |
@@ -41,6 +42,19 @@ Phase 07 provides an early integration demo; it does not complete M1 before dura
 | 13 | Redacted observability, correlation, metrics, persistent breaker, safe replay, Reliability Lab | Stored facts back scenario outcomes; replay idempotent; breaker preserves resolution. |
 | 14 | Threat-driven security, performance, chaos, runbooks, independent review | Required failures exercised; no unresolved Critical/High findings; honest performance evidence. |
 | 15 | Hosted portfolio release | Exact revision/CI/deployment linkage, sandbox/recovery, responsive QA, cost audit, runbooks and recruiter walkthrough. M2. |
+| 16 | Provider-hosted card and 3DS sandbox flow | Starts after M2 and only when the account supports it; PayRail never receives PAN/CVV and redirects do not prove success. |
+| 17 | Xendit QRPH adapter | Capability-driven contracts and fixtures; genuine external proof when account access permits; never fail over an unresolved attempt. |
+| 18 | Local ISO 8583 educational lab | Local 0200/0210 subset, safe field/bitmap validation and no PAN or network connectivity. |
+
+## Git and delivery workflow
+
+The public repository is `https://github.com/defnotwig/payrail-ph`. The owner implementation branch is `personal/defnotwig`; verified work moves through `dev` → `staging` → `main` in pull requests. Each phase has one implementation PR; milestone releases are promoted from staging. `fix/*` branches use the same checks and are synchronized downstream after release. The first publication of the existing verified history is the documented empty-remote bootstrap exception; all later changes use PRs.
+
+GitHub accepts merge commits only. CI validates Conventional Commit subjects, PR titles and promotion sources. Branch protections require current checks, resolved conversations, and an independent Codex review record bound to the exact PR base and binary diff digest. A change to the source diff invalidates its recorded review. The solo workflow does not require a second human approval.
+
+Keep the primary checkout on `main` and use the Codex-managed linked worktree for `personal/defnotwig`. Dev and staging use separate private schemas/roles in one nonproduction Supabase project; main uses its own Supabase project and Auth. Vercel deploys a separate web/API pair for each environment when actual free capacity and credentials allow. Cloudflare triggers recovery work only after that phase is ready.
+
+Public demo and deployment status is read-only and sanitized. The application remains sandbox-only. Hosted URLs and release records must point to the exact commit, CI run, migration version, and deployed web/API pair; pending environments are labeled pending rather than presented as live.
 
 ## Core contracts
 - PHP only; bigint minor units internally and PostgreSQL BIGINT; JSON uses decimal minor-unit strings.

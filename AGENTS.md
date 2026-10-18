@@ -26,3 +26,11 @@ Build a sandbox-only Philippine payment orchestration portfolio. Release 1 uses 
 - Update PLANS.md, the phase build record, and harness/build-log.md when phase scope or acceptance evidence changes.
 - Record significant architecture, configuration, and schema decisions as append-only JSON lines in .mex/events/decisions.jsonl.
 - Keep documentation lightweight. Add an ADR when its decision is exercised by implementation.
+
+## Git collaboration
+- `personal/defnotwig` is the implementation branch; promote it to `dev`, `dev` to `staging`, and `staging` to `main` through pull requests. `fix/*` branches may target any protected branch and must be synchronized downstream after release.
+- Do not push directly to `dev`, `staging`, or `main`. Preserve the existing history and authorship. Use merge commits; do not squash, rebase-merge, force-push, or delete protected branches.
+- Use Conventional Commit subjects and matching pull request titles with the allowed types `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `build`, `ci`, `chore`, and `revert`.
+- Keep the primary checkout on `main` for release inspection and implement in the linked `personal/defnotwig` worktree. Do not check out the same branch in more than one worktree.
+- Each pull request needs passing CI and an independent Codex review record whose base revision and diff digest match the current change. Any changed source diff needs a fresh review record.
+- Keep worktree-local ports, environment files, and test databases isolated. Never commit credentials, provider payloads containing customer data, or sandbox QR codes.
