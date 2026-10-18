@@ -42,10 +42,10 @@ export default function Home() {
         </a>
         <nav className="primary-nav" aria-label="Main navigation">
           <a href="#system">System design</a>
-          <a href="#reliability">Reliability Lab</a>
+          <a href="/ops/reliability-lab">Reliability Lab</a>
           <span className="nav-divider" aria-hidden="true" />
-          <a className="nav-access" href="#access">
-            Operator sign-in <span aria-hidden="true">↗</span>
+          <a className="nav-access" href="/ops">
+            Operator portal <span aria-hidden="true">↗</span>
           </a>
         </nav>
       </header>
@@ -163,7 +163,17 @@ export default function Home() {
             <span>Sandbox only</span>
           </div>
           <p className="operator-note">
-            <b>Private operations</b> require authenticated operator access.
+            <b>Private operations</b> require authenticated operator access.{" "}
+            <a
+              href="/ops"
+              style={{
+                color: "var(--color-cobalt)",
+                textDecoration: "underline",
+                marginLeft: "4px",
+              }}
+            >
+              Launch Console ↗
+            </a>
           </p>
         </div>
         <Image
