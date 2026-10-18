@@ -24,6 +24,10 @@ Trust boundaries:
 | Database outage or function termination after webhook persistence | Lost or delayed financial processing | Inbox/work persisted before acknowledgment; immediate best-effort path plus PostgreSQL recovery and outage tests. |
 | Database role or SQL injection compromise | Broad data access or mutation | Least-privilege runtime roles, parameterized SQL, private schema, migration-role isolation, scanning. |
 | Secret or provider payload leakage | Account compromise or personal-data exposure | Secret manager/env validation, log redaction, sanitized fixtures, no raw payload in public/demo data. |
+| Server-Side Request Forgery (SSRF) via webhook URLs | Internal cloud metadata/intranet exploitation | Strict destination URL validation: blocks 127.0.0.1, RFC 1918 subnets, and AWS 169.254.169.254. |
+| Unbalanced or forged ledger journal postings | Financial leakage / double counting | SQL transactional constraint requiring sum(debits) - sum(credits) === 0; immutable ledger lines. |
+| Unauthorized or corrupted DLQ job replay | Re-execution of malicious or stale operations | RBAC enforcement requiring ADMIN role and recording immutable audit event before re-enqueuing. |
+| Raw PAN or CVV persistence | PCI DSS non-compliance and cardholder data compromise | CVV is never persisted; PAN is immediately tokenized and stored only in masked format (4111 **** 1111). |
 | Sandbox QR confusion or unexpected real-world use | Unintended test payment | Never expose a scannable sandbox QR or direct a person to pay it; show provider test action only. |
 | Dependency, deployment, or free-tier interruption | Service degradation, stale operations | Pinned lockfile, CI/scans, local worker/restore procedures, explicit degraded status, no financial loss claims. |
 | Reliability demo can mutate hosted finance | Abuse or false confidence | Fault injection local/development-only and authenticated; hosted page shows sanitized recorded evidence only. |
