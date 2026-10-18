@@ -2,6 +2,7 @@ import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { PG_POOL } from "../database/database.constants";
 import type { DatabasePool } from "../database/database.pool";
 import { LedgerService } from "../ledger/ledger.service";
+import { transitionSource } from "../financial/transaction";
 
 export type DiscrepancyType =
   | "MATCHED"
@@ -82,6 +83,7 @@ export class ReconciliationService {
         state: string;
         provider_payment_id: string | null;
         submission_state: string | null;
+        observation: { state?: string; amountMinor?: string; currency?: string } | null;
       }>(
         `SELECT 
            pi.id,
@@ -90,7 +92,8 @@ export class ReconciliationService {
            pi.currency,
            pi.state,
            pa.provider_payment_id,
-           pa.submission_state
+           pa.submission_state,
+           (SELECT pe.normalized_observation FROM payrail_private.provider_events pe WHERE pe.payment_intent_id=pi.id AND pe.processing_state='PROCESSED' ORDER BY pe.received_at DESC LIMIT 1) AS observation
          FROM payrail_private.payment_intents pi
          LEFT JOIN payrail_private.payment_attempts pa ON pa.payment_intent_id = pi.id
          WHERE pi.merchant_id = $1
@@ -105,7 +108,8 @@ export class ReconciliationService {
         let discrepancy: DiscrepancyType = "MATCHED";
         let resolution: ResolutionStatus = "UNRESOLVED";
         let notes = "Verified 3-way match";
-        const providerState = intent.submission_state || "unknown";
+        const evidence = intent.observation;
+        const providerState = evidence?.state || "unknown";
 
         if (!intent.provider_payment_id) {
           if (intent.state === "CREATED") {
@@ -116,10 +120,30 @@ export class ReconciliationService {
             resolution = "MANUAL_INVESTIGATION";
             notes = "Payment has non-initial state but zero provider attempts recorded";
           }
+        } else if (!evidence) {
+          discrepancy = "UNKNOWN";
+          resolution = "MANUAL_INVESTIGATION";
+          notes = "No verified provider observation is available for automatic repair";
+          discrepancyCount++;
+        } else if (evidence.amountMinor !== intent.amount_minor) {
+          discrepancy = "AMOUNT_MISMATCH";
+          resolution = "MANUAL_INVESTIGATION";
+          notes = "Verified provider amount differs from the payment intent";
+          discrepancyCount++;
+        } else if (evidence.currency !== intent.currency) {
+          discrepancy = "CURRENCY_MISMATCH";
+          resolution = "MANUAL_INVESTIGATION";
+          notes = "Verified provider currency differs from the payment intent";
+          discrepancyCount++;
         } else if (intent.state === "SUCCEEDED" && providerState === "SUCCEEDED") {
           discrepancy = "MATCHED";
           matchedCount++;
-        } else if (intent.state === "AWAITING_PAYMENT" && providerState === "SUCCEEDED") {
+        } else if (
+          ["AWAITING_PAYMENT", "UNKNOWN_REQUIRES_RECONCILIATION", "FAILED", "EXPIRED"].includes(
+            intent.state,
+          ) &&
+          providerState === "SUCCEEDED"
+        ) {
           // Missed webhook scenario: Provider confirmed payment, but local DB missed webhook
           discrepancy = "STATUS_MISMATCH";
           resolution = "AUTO_REPAIRED";
@@ -127,18 +151,19 @@ export class ReconciliationService {
             "Missed webhook recovered: transitioning local state to SUCCEEDED and posting to ledger";
 
           // Execute deterministic safe repair:
+          await transitionSource(client, "RECONCILIATION");
           await client.query(
             `UPDATE payrail_private.payment_intents
              SET state = 'SUCCEEDED', updated_at = clock_timestamp()
-             WHERE id = $1`,
-            [intent.id],
+             WHERE id = $1 AND state = $2`,
+            [intent.id, intent.state],
           );
 
           await client.query(
             `INSERT INTO payrail_private.payment_state_events
                (payment_intent_id, previous_state, next_state, source)
-             VALUES ($1, 'AWAITING_PAYMENT', 'SUCCEEDED', 'RECONCILIATION_REPAIR')`,
-            [intent.id],
+             VALUES ($1, $2, 'SUCCEEDED', 'RECONCILIATION')`,
+            [intent.id, intent.state],
           );
 
           // Post compensating ledger entry
@@ -149,12 +174,34 @@ export class ReconciliationService {
             intent.currency,
             client,
           );
+          await client.query(
+            "UPDATE payrail_private.orders SET status='PAID',updated_at=clock_timestamp() WHERE id=(SELECT order_id FROM payrail_private.payment_intents WHERE id=$1)",
+            [intent.id],
+          );
+          await client.query(
+            "INSERT INTO payrail_private.outbox_events(event_type,aggregate_type,aggregate_id,payload,business_effect_key) VALUES('payment.succeeded','payment',$1,$2,$3) ON CONFLICT DO NOTHING",
+            [
+              intent.id,
+              JSON.stringify({
+                paymentIntentId: intent.id,
+                merchantId,
+                amountMinor: intent.amount_minor,
+                currency: intent.currency,
+              }),
+              `payment.succeeded:${intent.id}`,
+            ],
+          );
 
           discrepancyCount++;
         } else if (intent.state === "SUCCEEDED" && providerState === "FAILED") {
           discrepancy = "STATUS_MISMATCH";
           resolution = "MANUAL_INVESTIGATION";
           notes = "Critical discrepancy: local marks SUCCEEDED but provider reported FAILED";
+          discrepancyCount++;
+        } else if (intent.state !== providerState) {
+          discrepancy = "STATUS_MISMATCH";
+          resolution = "MANUAL_INVESTIGATION";
+          notes = "Local and verified provider states differ without a permitted automatic repair";
           discrepancyCount++;
         } else {
           discrepancy = "MATCHED";
