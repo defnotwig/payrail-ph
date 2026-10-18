@@ -71,11 +71,12 @@ export class LedgerService {
       throw new BadRequestException("Journal entry must contain at least two ledger lines.");
     }
 
-    // 1. Invariant: Sum(Debits) === Sum(Credits)
-    let totalDebits = 0n;
-    let totalCredits = 0n;
+    // 1. Invariant: Sum(Debits) === Sum(Credits) per currency
+    const debitsByCurrency = new Map<string, bigint>();
+    const creditsByCurrency = new Map<string, bigint>();
 
     for (const line of dto.lines) {
+      const currency = line.currency || "PHP";
       const amount = BigInt(line.amountMinor);
       if (amount <= 0n) {
         throw new BadRequestException(
@@ -83,21 +84,59 @@ export class LedgerService {
         );
       }
       if (line.direction === "DEBIT") {
-        totalDebits += amount;
+        debitsByCurrency.set(currency, (debitsByCurrency.get(currency) || 0n) + amount);
       } else if (line.direction === "CREDIT") {
-        totalCredits += amount;
+        creditsByCurrency.set(currency, (creditsByCurrency.get(currency) || 0n) + amount);
       } else {
         throw new BadRequestException(`Invalid direction: ${line.direction}`);
       }
     }
 
-    if (totalDebits !== totalCredits) {
-      throw new BadRequestException(
-        `Unbalanced ledger entry: Total Debits (${totalDebits}) != Total Credits (${totalCredits}) in currency minor units.`,
-      );
+    const allCurrencies = new Set([...debitsByCurrency.keys(), ...creditsByCurrency.keys()]);
+    for (const currency of allCurrencies) {
+      const debits = debitsByCurrency.get(currency) || 0n;
+      const credits = creditsByCurrency.get(currency) || 0n;
+      if (debits !== credits) {
+        throw new BadRequestException(
+          `Unbalanced ledger entry for currency ${currency}: Total Debits (${debits}) != Total Credits (${credits}) in minor units.`,
+        );
+      }
     }
 
     const executeOperation = async (client: PoolClient): Promise<JournalEntryRecord> => {
+      await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [
+        JSON.stringify([dto.merchantId, dto.referenceType, dto.referenceId]),
+      ]);
+      const existing = await client.query<{ id: string }>(
+        "SELECT id FROM payrail_private.journal_entries WHERE merchant_id=$1 AND reference_type=$2 AND reference_id=$3",
+        [dto.merchantId, dto.referenceType, dto.referenceId],
+      );
+      if (existing.rows[0]) {
+        const entries = await this.getJournalEntries(dto.merchantId, 10000, client);
+        const entry = entries.find((item) => item.id === existing.rows[0]?.id);
+        if (!entry) throw new InternalServerErrorException("Existing journal is incomplete");
+        const normalized = (
+          lines: Array<{
+            accountNumber: string;
+            direction: string;
+            amountMinor: string;
+            currency?: string;
+          }>,
+        ) =>
+          JSON.stringify(
+            lines
+              .map((l) => [
+                l.accountNumber,
+                l.direction,
+                BigInt(l.amountMinor).toString(),
+                l.currency || "PHP",
+              ])
+              .sort(),
+          );
+        if (normalized(entry.lines) !== normalized(dto.lines))
+          throw new BadRequestException("Business effect already exists with different values");
+        return entry;
+      }
       // 2. Fetch and validate accounts
       const accountNumbers = [...new Set(dto.lines.map((l) => l.accountNumber))];
       const accountsRes = await client.query<{
@@ -157,6 +196,8 @@ export class LedgerService {
           throw new BadRequestException(`Account ${line.accountNumber} not found.`);
         }
         const lineCurrency = line.currency || acc.currency;
+        if (lineCurrency !== acc.currency)
+          throw new BadRequestException("Ledger line currency must match account currency");
 
         const lineRes = await client.query<{
           id: string;
@@ -187,6 +228,11 @@ export class LedgerService {
           currency: lineCurrency,
         });
       }
+
+      await client.query(
+        "UPDATE payrail_private.journal_entries SET posting_state='POSTED' WHERE id=$1",
+        [entry.id],
+      );
 
       return {
         id: entry.id,
@@ -350,8 +396,12 @@ export class LedgerService {
   /**
    * Retrieves recent journal entries with complete ledger line breakdown.
    */
-  async getJournalEntries(merchantId: string, limit = 50): Promise<JournalEntryRecord[]> {
-    const res = await this.db.query<{
+  async getJournalEntries(
+    merchantId: string,
+    limit = 50,
+    client?: PoolClient,
+  ): Promise<JournalEntryRecord[]> {
+    const res = await (client || this.db).query<{
       id: string;
       merchant_id: string;
       entry_number: string;

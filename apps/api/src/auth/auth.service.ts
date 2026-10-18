@@ -1,112 +1,80 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
-import * as crypto from "node:crypto";
+import { ForbiddenException, Inject, Injectable, UnauthorizedException } from "@nestjs/common";
+import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from "jose";
+import { z } from "zod";
+import { PG_POOL } from "../database/database.constants";
+import type { DatabasePool } from "../database/database.pool";
 import type { UserRole } from "./roles.decorator";
-
+export const AUTH_JWKS = Symbol("AUTH_JWKS");
 export interface SessionPayload {
   userId: string;
   email: string;
-  role: UserRole;
   merchantId: string;
-  iat: number;
-  exp: number;
+  role: UserRole;
+  permissions: string[];
+  actorType: "OPERATOR" | "API_KEY";
 }
-
+const identitySchema = z.object({
+  sub: z.uuid(),
+  email: z.email(),
+  role: z.literal("authenticated"),
+  session_id: z.uuid(),
+});
+export function createAuthKeyResolver(): JWTVerifyGetKey {
+  const url = process.env.SUPABASE_URL;
+  if (!url) throw new Error("SUPABASE_URL is required to configure operator identity.");
+  return createRemoteJWKSet(new URL(`${url.replace(/\/$/, "")}/auth/v1/.well-known/jwks.json`), {
+    timeoutDuration: 3000,
+    cacheMaxAge: 600_000,
+    cooldownDuration: 30_000,
+  });
+}
 @Injectable()
 export class AuthService {
-  private readonly secretKey = process.env.INTERNAL_SERVICE_SECRET || "dev_internal_secret";
-
-  /**
-   * Generates a signed, tamper-resistant HMAC-SHA256 operator session token.
-   */
-  generateSessionToken(
-    userId: string,
-    email: string,
-    role: UserRole,
-    merchantId = "merchant_default",
-    expiresInHours = 24,
-  ): string {
-    const iat = Math.floor(Date.now() / 1000);
-    const exp = iat + expiresInHours * 3600;
-
-    const payload: SessionPayload = {
-      userId,
-      email,
-      role,
-      merchantId,
-      iat,
-      exp,
-    };
-
-    const serializedPayload = Buffer.from(JSON.stringify(payload)).toString("base64url");
-    const signature = crypto
-      .createHmac("sha256", this.secretKey)
-      .update(serializedPayload)
-      .digest("base64url");
-
-    return `${serializedPayload}.${signature}`;
-  }
-
-  /**
-   * Verifies and decodes an HMAC-SHA256 operator session token.
-   * Uses constant-time comparison to prevent timing side-channel attacks.
-   */
-  verifySessionToken(token: string): SessionPayload {
-    const parts = token.split(".");
-    if (parts.length !== 2 || !parts[0] || !parts[1]) {
-      throw new UnauthorizedException("Malformed session token.");
-    }
-
-    const serializedPayload = parts[0];
-    const signature = parts[1];
-    const expectedSignature = crypto
-      .createHmac("sha256", this.secretKey)
-      .update(serializedPayload)
-      .digest("base64url");
-
-    const expectedBuffer = Buffer.from(expectedSignature, "utf8");
-    const actualBuffer = Buffer.from(signature, "utf8");
-
-    if (
-      expectedBuffer.length !== actualBuffer.length ||
-      !crypto.timingSafeEqual(expectedBuffer, actualBuffer)
-    ) {
-      throw new UnauthorizedException("Invalid token signature.");
-    }
-
+  constructor(
+    @Inject(PG_POOL) private readonly pool: DatabasePool,
+    @Inject(AUTH_JWKS) private readonly keys: JWTVerifyGetKey,
+  ) {}
+  async verifyAccessToken(token: string, selectedMerchant?: string): Promise<SessionPayload> {
+    let identity: z.infer<typeof identitySchema>;
     try {
-      const payload: SessionPayload = JSON.parse(
-        Buffer.from(serializedPayload, "base64url").toString("utf8"),
-      );
-
-      const now = Math.floor(Date.now() / 1000);
-      if (payload.exp < now) {
-        throw new UnauthorizedException("Session token has expired.");
-      }
-
-      return payload;
+      const url = process.env.SUPABASE_URL;
+      if (!url) throw new Error("Identity unavailable");
+      const { payload } = await jwtVerify(token, this.keys, {
+        issuer: `${url.replace(/\/$/, "")}/auth/v1`,
+        audience: "authenticated",
+        algorithms: ["ES256", "RS256"],
+        requiredClaims: ["exp", "iat", "sub", "session_id", "role"],
+        clockTolerance: 0,
+      });
+      identity = identitySchema.parse(payload);
     } catch {
-      throw new UnauthorizedException("Corrupt session payload.");
+      throw new UnauthorizedException("Invalid or expired operator access token.");
     }
-  }
-
-  /**
-   * Authenticates standard development/demo operator credentials.
-   */
-  authenticateDevUser(
-    email: string,
-    requestedRole?: UserRole,
-  ): { token: string; user: SessionPayload } {
-    let role: UserRole = requestedRole || "VIEWER";
-
-    if (email.includes("admin")) role = "ADMIN";
-    else if (email.includes("finance")) role = "FINANCE";
-    else if (email.includes("engineer")) role = "ENGINEER";
-    else if (email.includes("support")) role = "SUPPORT";
-
-    const userId = `usr_${crypto.createHash("sha256").update(email).digest("hex").slice(0, 12)}`;
-    const token = this.generateSessionToken(userId, email, role);
-    const user = this.verifySessionToken(token);
-
-    return { token, user };
+    // JWT identity is distinct from authorization, read from current private database rows.
+    const result = await this.pool.query<{
+      merchant_id: string;
+      role: UserRole;
+      permissions: string[];
+    }>(
+      `SELECT m.merchant_id, m.role, COALESCE(array_agg(p.permission) FILTER (WHERE p.permission IS NOT NULL), '{}') AS permissions
+       FROM payrail_private.operator_memberships m
+       JOIN payrail_private.operators o ON o.id = m.operator_id AND o.is_active = true
+       LEFT JOIN payrail_private.role_permissions p ON p.role = m.role
+       WHERE m.operator_id = $1 AND ($2::text IS NULL OR m.merchant_id = $2)
+         AND m.environment = $3 AND m.is_active = true
+       GROUP BY m.merchant_id, m.role`,
+      [identity.sub, selectedMerchant || null, process.env.APP_ENV || "local"],
+    );
+    const membership = result.rows[0];
+    if (!membership || result.rows.length !== 1)
+      throw new ForbiddenException("An active, unambiguous merchant membership is required.");
+    return {
+      userId: identity.sub,
+      email: identity.email,
+      merchantId: membership.merchant_id,
+      role: membership.role,
+      permissions: membership.permissions,
+      actorType: "OPERATOR",
+    };
   }
 }

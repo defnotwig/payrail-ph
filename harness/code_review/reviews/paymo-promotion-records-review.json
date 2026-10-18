@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 2,
+  "reviewedBaseSha": "1a48e3b97beb1fe2e7cbf2e1c927dc69a5a34eea",
+  "reviewedDiffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "reviewer": "codex-subagent/independent-review",
+  "reviewSource": "separate-agent-review",
+  "reviewReport": "paymo-promotion-records-review.md",
+  "reviewReportSha256": "de45755226c025eca268822c6c7eb707ded3df267639cc46095b0471e30dbc82",
+  "reviewedAt": "2026-10-18T15:45:00Z",
+  "verdict": "approve",
+  "findings": []
+}

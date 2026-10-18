@@ -100,6 +100,18 @@ describe("Merchant API Platform", () => {
       expect(() =>
         webhooksService.validateDestinationUrl("https://127.0.0.1:4000/webhook"),
       ).toThrow(BadRequestException);
+      for (const destination of [
+        "https://[::1]/hook",
+        "https://[::ffff:127.0.0.1]/hook",
+        "https://10.0.0.2/hook",
+        "https://172.31.0.5/hook",
+        "https://192.168.1.2/hook",
+        "https://user:pass@api.merchant.com/hook",
+        "https://api.merchant.com:8443/hook",
+      ])
+        expect(() => webhooksService.validateDestinationUrl(destination)).toThrow(
+          BadRequestException,
+        );
     });
 
     it("allows valid public HTTPS destinations", () => {

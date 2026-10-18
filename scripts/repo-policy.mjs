@@ -41,6 +41,15 @@ export function isPromotionAllowed(sourceBranch, targetBranch) {
     return ["dev", "staging", "main"].includes(targetBranch);
   }
 
+  const qualificationBranches = new Set([
+    "codex/paymo-financial",
+    "codex/paymo-product",
+    "codex/paymo-security",
+  ]);
+  if (targetBranch === "personal/defnotwig" && qualificationBranches.has(sourceBranch)) {
+    return true;
+  }
+
   return (
     (sourceBranch === "personal/defnotwig" && targetBranch === "dev") ||
     (sourceBranch === "dev" && targetBranch === "staging") ||
