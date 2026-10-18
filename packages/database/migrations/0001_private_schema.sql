@@ -1,0 +1,2 @@
+CREATE SCHEMA IF NOT EXISTS payrail_private;
+REVOKE ALL ON SCHEMA payrail_private FROM PUBLIC;

@@ -1,0 +1,28 @@
+{
+  "name": "payrail-ph",
+  "private": true,
+  "packageManager": "pnpm@10.30.3",
+  "engines": {
+    "node": ">=22.12.0 <23"
+  },
+  "scripts": {
+    "dev:web": "pnpm --filter @payrail/web dev",
+    "dev:api": "pnpm --filter @payrail/api dev",
+    "format": "biome format --write apps/api/src apps/web/src packages/database/src scripts package.json apps/api/package.json apps/web/package.json packages/database/package.json tsconfig.base.json biome.json apps/api/tsconfig.json apps/api/tsconfig.build.json apps/api/vitest.config.mts apps/web/tsconfig.json apps/web/next.config.ts packages/database/tsconfig.json packages/database/tsconfig.build.json",
+    "format:check": "biome format apps/api/src apps/web/src packages/database/src scripts package.json apps/api/package.json apps/web/package.json packages/database/package.json tsconfig.base.json biome.json apps/api/tsconfig.json apps/api/tsconfig.build.json apps/api/vitest.config.mts apps/web/tsconfig.json apps/web/next.config.ts packages/database/tsconfig.json packages/database/tsconfig.build.json",
+    "lint": "biome lint apps/api/src apps/web/src packages/database/src scripts",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test:unit": "pnpm --filter @payrail/api test:unit",
+    "build": "pnpm -r --if-present build",
+    "db:migrate": "pnpm --filter @payrail/database migrate",
+    "db:local:start": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-local-postgres.ps1",
+    "db:local:stop": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/stop-local-postgres.ps1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@types/node": "22.20.5",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "vitest": "5.0.5"
+  }
+}

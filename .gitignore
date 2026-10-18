@@ -1,0 +1,15 @@
+node_modules/
+.next/
+dist/
+coverage/
+.turbo/
+.local/
+.playwright-mcp/
+.env
+.env.*
+!.env.example
+*.log
+*.tsbuildinfo
+playwright-report/
+test-results/
+/harness/design-qa/payrail-desktop-latest.png

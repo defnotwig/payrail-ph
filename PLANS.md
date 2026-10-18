@@ -26,7 +26,7 @@ Phase 07 provides an early integration demo; it does not complete M1 before dura
 | Phase | Deliverable | Gate |
 |---|---|---|
 | 00 | Lightweight operating documents and evidence format | Financial constraints and next step are clear. |
-| 01 | Runnable pnpm monorepo, web/API health routes, environment validation, isolated PostgreSQL, CI skeleton | Clean install, typecheck, build, migration setup, health/readiness. |
+| 01 | Runnable pnpm monorepo, web/API health routes, environment validation, checksum-verified SQL migrations, isolated PostgreSQL, CI skeleton | Clean install, typecheck, build, migration setup, health/readiness. |
 | 02 | PHP money/currency, allocation, SQL transaction helper, merchant/order foundation | Property, round-trip, invalid-input, rollback, and constraint tests. |
 | 03 | Supabase operator sessions, membership authorization, permission matrix, restricted DB roles | Cross-merchant, role, forged/expired session, and browser-access tests. M0. |
 | 04 | Payment intents/attempts, exact transitions, request fingerprints, idempotency, durable submission records | Concurrent same-key requests create one operation; conflict and unknown-attempt protections pass. |
