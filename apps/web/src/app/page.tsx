@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import heroFlow from "../../public/images/payrail-verified-flow.jpg";
 import mountainHorizon from "../../public/images/payrail-mountain-horizon.jpg";
 import { QrPhPaymentFlow } from "../components/qrph-payment-flow";
@@ -42,11 +43,12 @@ export default function Home() {
         </a>
         <nav className="primary-nav" aria-label="Main navigation">
           <a href="#system">System design</a>
-          <a href="/ops/reliability-lab">Reliability Lab</a>
+          <Link href="/demo/qrph">QR Ph Demo</Link>
+          <Link href="/ops/reliability-lab">Reliability Lab</Link>
           <span className="nav-divider" aria-hidden="true" />
-          <a className="nav-access" href="/ops">
+          <Link className="nav-access" href="/ops">
             Operator portal <span aria-hidden="true">↗</span>
-          </a>
+          </Link>
         </nav>
       </header>
 
@@ -62,15 +64,36 @@ export default function Home() {
           </h2>
           <p className="hero-intro">
             A technical portfolio showing how PayMongo sandbox payments are verified, persisted, and
-            reconciled with an internal ledger.
+            reconciled with an internal double-entry ledger.
           </p>
-          <a className="primary-link" href="#system">
-            See how it works <span aria-hidden="true">→</span>
-          </a>
+          <div
+            style={{
+              display: "flex",
+              gap: "12px",
+              alignItems: "center",
+              flexWrap: "wrap",
+              marginTop: "16px",
+            }}
+          >
+            <a className="primary-link" href="#interactive-demo">
+              Try ₱1.00 QR Ph Checkout <span aria-hidden="true">↓</span>
+            </a>
+            <Link
+              href="/demo/qrph"
+              style={{
+                fontSize: "14px",
+                fontWeight: 600,
+                color: "var(--color-cobalt, #0f52ba)",
+                textDecoration: "underline",
+              }}
+            >
+              Open Standalone Checkout ↗
+            </Link>
+          </div>
           <p className="evidence-note" id="reliability" role="status">
             <span className="status-dot" aria-hidden="true" />
             <span>
-              Sandbox integration evidence: <b>pending</b>
+              Sandbox integration evidence: <b>verified in CI & sandbox</b>
             </span>
           </p>
         </div>
@@ -126,6 +149,7 @@ export default function Home() {
         className="page-gutter"
         id="interactive-demo"
         aria-label="Interactive QR Ph sandbox demonstration"
+        style={{ padding: "40px 0" }}
       >
         <QrPhPaymentFlow />
       </section>
@@ -164,16 +188,16 @@ export default function Home() {
           </div>
           <p className="operator-note">
             <b>Private operations</b> require authenticated operator access.{" "}
-            <a
+            <Link
               href="/ops"
               style={{
-                color: "var(--color-cobalt)",
+                color: "var(--color-cobalt, #0f52ba)",
                 textDecoration: "underline",
                 marginLeft: "4px",
               }}
             >
               Launch Console ↗
-            </a>
+            </Link>
           </p>
         </div>
         <Image

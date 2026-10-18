@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PageHeader, StatusBadge } from "../../../components/ui";
 import styles from "../ops.module.css";
 
 export default function CardsOpsPage() {
@@ -42,18 +43,11 @@ export default function CardsOpsPage() {
 
   return (
     <div>
-      <div className={styles.headerSection}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <h1 className={styles.pageTitle}>Cards & 3-D Secure Educational Simulator</h1>
-            <p className={styles.pageSubtitle}>
-              PCI DSS-conscious architecture demonstrating tokenization, PAN masking, 3DS
-              challenges, and the Auth/Capture/Void lifecycle.
-            </p>
-          </div>
-          <span className={styles.badgeSuccess}>PCI SCOPE: LEVEL 1 CONSCIOUS</span>
-        </div>
-      </div>
+      <PageHeader
+        title="Cards & 3-D Secure Educational Simulator"
+        subtitle="PCI DSS-conscious architecture demonstrating tokenization, PAN masking, 3DS challenges, and the Auth/Capture/Void lifecycle."
+        actions={<StatusBadge status="SUCCEEDED" customLabel="PCI SCOPE: LEVEL 1 CONSCIOUS" />}
+      />
 
       <div className={styles.gridTwoCol}>
         <div className={styles.card}>
@@ -68,9 +62,10 @@ export default function CardsOpsPage() {
                 htmlFor="pan-input"
                 style={{
                   fontSize: "12px",
-                  color: "#94a3b8",
+                  color: "var(--color-text-secondary, #475569)",
                   display: "block",
                   marginBottom: "6px",
+                  fontWeight: 600,
                 }}
               >
                 Primary Account Number (PAN)
@@ -81,8 +76,16 @@ export default function CardsOpsPage() {
                 className={styles.inputField}
                 value={pan}
                 onChange={(e) => setPan(e.target.value)}
+                style={{ fontVariantNumeric: "tabular-nums" }}
               />
-              <span style={{ fontSize: "11px", color: "#64748b" }}>
+              <span
+                style={{
+                  fontSize: "11px",
+                  color: "var(--color-text-muted, #64748b)",
+                  marginTop: "4px",
+                  display: "block",
+                }}
+              >
                 Masked storage preview: <code>{maskedPan}</code>
               </span>
             </div>
@@ -93,9 +96,10 @@ export default function CardsOpsPage() {
                   htmlFor="exp-month-input"
                   style={{
                     fontSize: "12px",
-                    color: "#94a3b8",
+                    color: "var(--color-text-secondary, #475569)",
                     display: "block",
                     marginBottom: "6px",
+                    fontWeight: 600,
                   }}
                 >
                   Exp Month
@@ -106,6 +110,7 @@ export default function CardsOpsPage() {
                   className={styles.inputField}
                   value={expMonth}
                   onChange={(e) => setExpMonth(e.target.value)}
+                  style={{ fontVariantNumeric: "tabular-nums" }}
                 />
               </div>
               <div>
@@ -113,9 +118,10 @@ export default function CardsOpsPage() {
                   htmlFor="exp-year-input"
                   style={{
                     fontSize: "12px",
-                    color: "#94a3b8",
+                    color: "var(--color-text-secondary, #475569)",
                     display: "block",
                     marginBottom: "6px",
+                    fontWeight: 600,
                   }}
                 >
                   Exp Year
@@ -126,6 +132,7 @@ export default function CardsOpsPage() {
                   className={styles.inputField}
                   value={expYear}
                   onChange={(e) => setExpYear(e.target.value)}
+                  style={{ fontVariantNumeric: "tabular-nums" }}
                 />
               </div>
               <div>
@@ -133,9 +140,10 @@ export default function CardsOpsPage() {
                   htmlFor="cvv-input"
                   style={{
                     fontSize: "12px",
-                    color: "#94a3b8",
+                    color: "var(--color-text-secondary, #475569)",
                     display: "block",
                     marginBottom: "6px",
+                    fontWeight: 600,
                   }}
                 >
                   CVV (Non-stored)
@@ -155,9 +163,10 @@ export default function CardsOpsPage() {
                 htmlFor="amount-input"
                 style={{
                   fontSize: "12px",
-                  color: "#94a3b8",
+                  color: "var(--color-text-secondary, #475569)",
                   display: "block",
                   marginBottom: "6px",
+                  fontWeight: 600,
                 }}
               >
                 Amount (PHP)
@@ -168,8 +177,16 @@ export default function CardsOpsPage() {
                 className={styles.inputField}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
+                style={{ fontVariantNumeric: "tabular-nums" }}
               />
-              <span style={{ fontSize: "11px", color: "#64748b" }}>
+              <span
+                style={{
+                  fontSize: "11px",
+                  color: "var(--color-text-muted, #64748b)",
+                  marginTop: "4px",
+                  display: "block",
+                }}
+              >
                 Amounts ≥ ₱1,000.00 trigger mandatory 3-D Secure Strong Customer Authentication
                 (SCA).
               </span>
@@ -184,44 +201,56 @@ export default function CardsOpsPage() {
         <div className={styles.card}>
           <div className={styles.cardHeader}>
             <h2 className={styles.cardTitle}>Auth / Capture / Void Lifecycle State</h2>
-            <span
-              className={
+            <StatusBadge
+              status={
                 lifecycleState === "CAPTURED"
-                  ? styles.badgeSuccess
+                  ? "SUCCEEDED"
                   : lifecycleState === "AUTHORIZED"
-                    ? styles.badgePill
+                    ? "PROCESSING"
                     : lifecycleState === "VOIDED"
-                      ? styles.badgeDanger
-                      : styles.badgeSandbox
+                      ? "FAILED"
+                      : "AWAITING_PAYMENT"
               }
-            >
-              STATE: {lifecycleState}
-            </span>
+              customLabel={`STATE: ${lifecycleState}`}
+            />
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-            <p style={{ fontSize: "13px", color: "#94a3b8", lineHeight: 1.6 }}>
-              In modern card acquiring, <b>Authorization</b> reserves credit on the
-              cardholder&apos;s issuing bank. <b>Capture</b> executes the settlement. If an order is
-              cancelled before fulfillment, a <b>Void</b> releases the hold without interchange
-              fees.
+            <p
+              style={{
+                fontSize: "13px",
+                color: "var(--color-text-secondary, #475569)",
+                lineHeight: 1.6,
+              }}
+            >
+              In modern card acquiring, <strong>Authorization</strong> reserves credit on the
+              cardholder&apos;s issuing bank. <strong>Capture</strong> executes the settlement. If
+              an order is cancelled before fulfillment, a <strong>Void</strong> releases the hold
+              without interchange fees.
             </p>
 
             {lifecycleState === "AUTHORIZED" && (
               <div
                 style={{
-                  background: "rgba(59, 130, 246, 0.1)",
-                  border: "1px solid #3b82f6",
-                  borderRadius: "6px",
-                  padding: "14px",
+                  background: "#eff6ff",
+                  border: "1px solid #bfdbfe",
+                  borderRadius: "8px",
+                  padding: "16px",
                 }}
               >
-                <h3 style={{ fontSize: "13px", color: "#60a5fa", margin: "0 0 6px 0" }}>
+                <h3
+                  style={{
+                    fontSize: "13px",
+                    color: "#1e40af",
+                    margin: "0 0 6px 0",
+                    fontWeight: 700,
+                  }}
+                >
                   ✓ Card Authorized Successfully
                 </h3>
                 {challengeUrl && (
-                  <p style={{ fontSize: "12px", color: "#cbd5e1", marginBottom: "10px" }}>
-                    3DS Challenge URL: <code style={{ color: "#38bdf8" }}>{challengeUrl}</code>
+                  <p style={{ fontSize: "12px", color: "#1e3a8a", marginBottom: "12px" }}>
+                    3DS Challenge URL: <code style={{ color: "#0f52ba" }}>{challengeUrl}</code>
                   </p>
                 )}
                 <div style={{ display: "flex", gap: "10px" }}>
@@ -238,12 +267,13 @@ export default function CardsOpsPage() {
             {lifecycleState === "CAPTURED" && (
               <div
                 style={{
-                  background: "rgba(16, 185, 129, 0.1)",
-                  border: "1px solid #10b981",
-                  borderRadius: "6px",
+                  background: "#f0fdf4",
+                  border: "1px solid #bbf7d0",
+                  borderRadius: "8px",
                   padding: "14px",
-                  color: "#34d399",
+                  color: "#166534",
                   fontSize: "13px",
+                  fontWeight: 500,
                 }}
               >
                 ✓ Transaction Captured & Settled. Balanced ledger journal posted to{" "}
@@ -254,12 +284,13 @@ export default function CardsOpsPage() {
             {lifecycleState === "VOIDED" && (
               <div
                 style={{
-                  background: "rgba(239, 68, 68, 0.1)",
-                  border: "1px solid #ef4444",
-                  borderRadius: "6px",
+                  background: "#fef2f2",
+                  border: "1px solid #fecaca",
+                  borderRadius: "8px",
                   padding: "14px",
-                  color: "#f87171",
+                  color: "#991b1b",
                   fontSize: "13px",
+                  fontWeight: 500,
                 }}
               >
                 ✓ Authorization Voided. Credit hold released back to cardholder with zero processing

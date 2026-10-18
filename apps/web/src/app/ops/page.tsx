@@ -1,110 +1,100 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { MetricCard, MetricGrid, PageHeader, StatusBadge } from "../../components/ui";
 import styles from "./ops.module.css";
 
 export default function OpsOverviewPage() {
-  const [_copied, _setCopied] = useState(false);
-
   return (
     <div>
-      <div className={styles.headerSection}>
-        <h1 className={styles.pageTitle}>Executive Payment Operations Overview</h1>
-        <p className={styles.pageSubtitle}>
-          Mission-critical metrics, ledger balance invariants, and downstream provider circuit
-          state.
-        </p>
-      </div>
+      <PageHeader
+        title="Payment Operations Overview"
+        subtitle="Mission-critical operational metrics, double-entry conservation, and downstream circuit state."
+        showEnvironment={true}
+      />
 
-      <div className={styles.statsGrid}>
-        <div className={styles.statCard}>
-          <div className={styles.statLabel}>24h Gross Volume</div>
-          <div className={styles.statValue}>₱184,500.00</div>
-          <div className={styles.statSubtext}>369 verified sandbox transactions</div>
-        </div>
-        <div className={styles.statCard}>
-          <div className={styles.statLabel}>Ledger Balance Invariant</div>
-          <div className={styles.statValue} style={{ color: "#34d399" }}>
-            0.00 PHP DIFF
-          </div>
-          <div className={styles.statSubtext}>∑ Debits === ∑ Credits (100% Balanced)</div>
-        </div>
-        <div className={styles.statCard}>
-          <div className={styles.statLabel}>Provider Circuit Breaker</div>
-          <div className={styles.statValue} style={{ color: "#60a5fa" }}>
-            CLOSED
-          </div>
-          <div className={styles.statSubtext}>PayMongo sandbox: 0% failure rate</div>
-        </div>
-        <div className={styles.statCard}>
-          <div className={styles.statLabel}>Dead Letter Queue</div>
-          <div className={styles.statValue} style={{ color: "#94a3b8" }}>
-            0 JOBS
-          </div>
-          <div className={styles.statSubtext}>All durable worker retries healthy</div>
-        </div>
-      </div>
+      <MetricGrid>
+        <MetricCard
+          label="24h Gross Volume"
+          value="₱184,500.00"
+          metadata="369 verified sandbox transactions"
+        />
+        <MetricCard
+          label="Ledger Balance Invariant"
+          value={<span style={{ color: "#166534" }}>₱0.00 DIFF</span>}
+          metadata="∑ Debits === ∑ Credits (100% Balanced)"
+        />
+        <MetricCard
+          label="Provider Circuit Breaker"
+          value={<span style={{ color: "#0f52ba" }}>CLOSED</span>}
+          metadata="PayMongo sandbox: 0% failure rate"
+        />
+        <MetricCard
+          label="Dead Letter Queue"
+          value="0 JOBS"
+          metadata="All durable worker retries healthy"
+        />
+      </MetricGrid>
 
       <div className={styles.gridTwoCol}>
         <div className={styles.card}>
           <div className={styles.cardHeader}>
             <h2 className={styles.cardTitle}>Platform Architecture Invariants</h2>
-            <span className={styles.badgeSuccess}>ALL PASSING</span>
+            <StatusBadge status="SUCCEEDED" customLabel="ALL PASSING" />
           </div>
           <div className={styles.tableWrapper}>
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>Invariant</th>
-                  <th>Enforcement Mechanism</th>
-                  <th>Status</th>
+                  <th scope="col">Invariant</th>
+                  <th scope="col">Enforcement Mechanism</th>
+                  <th scope="col">Status</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <td>
-                    <b>Zero Double-Charge</b>
+                    <strong>Zero Double-Charge</strong>
                   </td>
                   <td>PostgreSQL Idempotency Keys + SHA-256 fingerprint</td>
                   <td>
-                    <span className={styles.badgeSuccess}>ENFORCED</span>
+                    <StatusBadge status="SUCCEEDED" customLabel="ENFORCED" />
                   </td>
                 </tr>
                 <tr>
                   <td>
-                    <b>Double-Entry Conservation</b>
+                    <strong>Double-Entry Conservation</strong>
                   </td>
                   <td>Strict SQL Transaction ∑(Debits) - ∑(Credits) === 0</td>
                   <td>
-                    <span className={styles.badgeSuccess}>ENFORCED</span>
+                    <StatusBadge status="SUCCEEDED" customLabel="ENFORCED" />
                   </td>
                 </tr>
                 <tr>
                   <td>
-                    <b>Over-Refund Prevention</b>
+                    <strong>Over-Refund Prevention</strong>
                   </td>
                   <td>SELECT FOR UPDATE capacity reservation</td>
                   <td>
-                    <span className={styles.badgeSuccess}>ENFORCED</span>
+                    <StatusBadge status="SUCCEEDED" customLabel="ENFORCED" />
                   </td>
                 </tr>
                 <tr>
                   <td>
-                    <b>At-Least-Once Delivery</b>
+                    <strong>At-Least-Once Delivery</strong>
                   </td>
                   <td>Transactional Outbox with lease-fenced workers</td>
                   <td>
-                    <span className={styles.badgeSuccess}>ENFORCED</span>
+                    <StatusBadge status="SUCCEEDED" customLabel="ENFORCED" />
                   </td>
                 </tr>
                 <tr>
                   <td>
-                    <b>PCI-DSS Compliance Scope</b>
+                    <strong>PCI-DSS Compliance Scope</strong>
                   </td>
                   <td>CVV non-persistence, PAN tokenization & masking</td>
                   <td>
-                    <span className={styles.badgeSuccess}>CONSCIOUS</span>
+                    <StatusBadge status="SUCCEEDED" customLabel="CONSCIOUS" />
                   </td>
                 </tr>
               </tbody>
@@ -114,12 +104,19 @@ export default function OpsOverviewPage() {
 
         <div className={styles.card}>
           <div className={styles.cardHeader}>
-            <h2 className={styles.cardTitle}>PayMo Interview Quick Launch</h2>
-            <span className={styles.badgePill}>RECRUITER SUITE</span>
+            <h2 className={styles.cardTitle}>Interactive Operational Labs</h2>
+            <span className={styles.badgePill}>RECRUITER & SRE SUITE</span>
           </div>
-          <p style={{ fontSize: "13px", color: "#94a3b8", marginBottom: "16px" }}>
-            Direct interactive playgrounds to evaluate engineering depth across distributed fintech
-            operations:
+          <p
+            style={{
+              fontSize: "13px",
+              color: "var(--color-text-secondary, #475569)",
+              marginBottom: "16px",
+              lineHeight: 1.5,
+            }}
+          >
+            Interactive sandboxes engineered to test and verify distributed fintech behavior under
+            edge conditions:
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             <Link
@@ -163,53 +160,85 @@ export default function OpsOverviewPage() {
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>Timestamp</th>
-                <th>Actor</th>
-                <th>Role</th>
-                <th>Action</th>
-                <th>Target ID</th>
-                <th>Result</th>
+                <th scope="col">Timestamp</th>
+                <th scope="col">Actor</th>
+                <th scope="col">Role</th>
+                <th scope="col">Action</th>
+                <th scope="col">Target ID</th>
+                <th scope="col">Result</th>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td>Just now</td>
                 <td>system@payrail.ph</td>
-                <td>SYSTEM</td>
-                <td>LEDGER_JOURNAL_POSTED</td>
-                <td>jnl_88f910a2</td>
                 <td>
-                  <span className={styles.badgeSuccess}>BALANCED</span>
+                  <span className={styles.badgePill}>SYSTEM</span>
+                </td>
+                <td>
+                  <strong>LEDGER_JOURNAL_POSTED</strong>
+                </td>
+                <td>
+                  <code style={{ fontSize: "12px", fontFamily: "ui-monospace, monospace" }}>
+                    jnl_88f910a2
+                  </code>
+                </td>
+                <td>
+                  <StatusBadge status="SUCCEEDED" customLabel="BALANCED" />
                 </td>
               </tr>
               <tr>
                 <td>2m ago</td>
                 <td>webhook-worker</td>
-                <td>WORKER</td>
-                <td>PAYMENT_INTENT_SUCCEEDED</td>
-                <td>pi_test_0192a831</td>
                 <td>
-                  <span className={styles.badgeSuccess}>VERIFIED</span>
+                  <span className={styles.badgePill}>WORKER</span>
+                </td>
+                <td>
+                  <strong>PAYMENT_INTENT_SUCCEEDED</strong>
+                </td>
+                <td>
+                  <code style={{ fontSize: "12px", fontFamily: "ui-monospace, monospace" }}>
+                    pi_test_0192a831
+                  </code>
+                </td>
+                <td>
+                  <StatusBadge status="SUCCEEDED" customLabel="VERIFIED" />
                 </td>
               </tr>
               <tr>
                 <td>5m ago</td>
                 <td>circuit-breaker</td>
-                <td>SYSTEM</td>
-                <td>PROBE_SUCCESS</td>
-                <td>paymongo_qrph</td>
                 <td>
-                  <span className={styles.badgeSuccess}>CLOSED</span>
+                  <span className={styles.badgePill}>SYSTEM</span>
+                </td>
+                <td>
+                  <strong>PROBE_SUCCESS</strong>
+                </td>
+                <td>
+                  <code style={{ fontSize: "12px", fontFamily: "ui-monospace, monospace" }}>
+                    paymongo_qrph
+                  </code>
+                </td>
+                <td>
+                  <StatusBadge status="SUCCEEDED" customLabel="CLOSED" />
                 </td>
               </tr>
               <tr>
                 <td>12m ago</td>
                 <td>reconciler</td>
-                <td>WORKER</td>
-                <td>DAILY_RECONCILIATION_RUN</td>
-                <td>rec_run_20261018</td>
                 <td>
-                  <span className={styles.badgeSuccess}>0 DISCREPANCIES</span>
+                  <span className={styles.badgePill}>WORKER</span>
+                </td>
+                <td>
+                  <strong>DAILY_RECONCILIATION_RUN</strong>
+                </td>
+                <td>
+                  <code style={{ fontSize: "12px", fontFamily: "ui-monospace, monospace" }}>
+                    rec_run_20261018
+                  </code>
+                </td>
+                <td>
+                  <StatusBadge status="SUCCEEDED" customLabel="0 DISCREPANCIES" />
                 </td>
               </tr>
             </tbody>
