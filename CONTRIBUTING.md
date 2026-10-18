@@ -8,16 +8,16 @@ The normal flow is `personal/defnotwig` → `dev` → `staging` → `main`. Open
 
 Keep the primary checkout available for release inspection and use a linked worktree for implementation. Each Git branch can be checked out in one worktree at a time. Give parallel worktrees distinct ports, ignored `.env` files, and isolated test databases. Before removing a worktree, preserve its branch and uncommitted work.
 
-PR titles and commit subjects use Conventional Commits. After opening a PR, append its number so GitHub can use the same semantic title for the merge commit:
+PR titles and commit subjects use Conventional Commits. Do not add the PR number to the PR title; GitHub appends it to the merge commit subject automatically:
 
 ```text
-feat(payments): add guarded submission (#12)
+feat(payments): add guarded submission
 fix(jobs): fence stale worker writes
 docs(repo): explain promotion workflow
 test(ledger): cover duplicate posting
 ```
 
-Allowed types are `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `build`, `ci`, `chore`, and `revert`. Use a scope when it clarifies the area. Add `!` or a `BREAKING CHANGE` footer for breaking changes. PR CI checks the numbered semantic title and every commit in the PR range, including existing merge commits. GitHub is configured to create merge subjects from the PR title; push CI checks semantic merge-subject format without querying GitHub for the merge-to-PR association.
+Allowed types are `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `build`, `ci`, `chore`, and `revert`. Use a scope when it clarifies the area. Add `!` or a `BREAKING CHANGE` footer for breaking changes. PR CI checks the semantic title and every commit in the PR range, including existing merge commits. GitHub is configured to create merge subjects from the PR title and append the PR number; push CI checks semantic merge-subject format without querying GitHub for the merge-to-PR association.
 
 GitHub merges pull requests with merge commits. Do not squash or rebase-merge. Preserve the original commit authors and history.
 

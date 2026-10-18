@@ -24,8 +24,8 @@ Publish the verified Phase 00/01 foundation as `defnotwig/payrail-ph`, establish
 - PR promotion: `personal/defnotwig` → `dev` → `staging` → `main`; `fix/*` may target a protected branch and is synchronized downstream.
 - Required PR checks: `CI / verify` and `CI / review-evidence`.
 - Review record: JSON under `harness/code_review/reviews/`, matching the exact PR base SHA and SHA-256 of the binary diff excluding review records. The record check binds evidence to the diff; a separate Codex reviewer provides process independence because this solo repository has no second GitHub reviewer identity.
-- Merges: merge commit only. PR titles include `(#PR_NUMBER)` and become the merge commit subject. No squash, rebase merge, force push, protected-branch deletion, or routine admin bypass.
-- CI validates every PR-range commit, including merge commits. Push validation checks merge-subject shape; the GitHub merge setting uses the PR title, which PR CI validates with the matching PR number.
+- Merges: merge commit only. PR titles use a plain Conventional Commit subject; GitHub appends `(#PR_NUMBER)` to the merge commit subject. No squash, rebase merge, force push, protected-branch deletion, or routine admin bypass.
+- CI validates every PR-range commit, including merge commits. Push validation checks merge-subject shape; PR CI validates the title before GitHub appends the number.
 - No required second-human approval in the selected solo workflow.
 
 ## Implementation steps
@@ -84,5 +84,8 @@ GitHub Actions must pass for each PR head and each promoted branch merge SHA. Co
 - GitHub protections are active on `dev`, `staging`, and `main`: strict `verify` and `review-evidence` checks, PRs, resolved conversations, enforced administrator rules, no force pushes/deletion, and no linear-history requirement.
 - Both CI jobs use `ubuntu-24.04`, `actions/checkout` v7.0.1, and `actions/setup-node` v7.1.0 at immutable Node 24-compatible SHAs. The `verify` job also uses `pnpm/action-setup` v6.1.0 at its immutable Node 24-compatible SHA; application tooling remains pinned to Node 22.14.0.
 - Initial CI runs for all four branches passed; see the phase build log for run links.
-- PR #1 is open from `personal/defnotwig` to `dev`; its current checked head and merge revision remain pending until final documentation updates and promotion.
+- PR #1, `docs(repo): establish public collaboration and CI policy`, merged from `personal/defnotwig` to `dev` as `3c62834af3160c5b1e212e02b2e04b8b316c98a8`. Required `verify` and `review-evidence` checks passed on its exact head; see [PR #1](https://github.com/defnotwig/payrail-ph/pull/1) and [CI run](https://github.com/defnotwig/payrail-ph/actions/runs/39108908266).
+- GitHub appends a pull request number to the merge subject even when `merge_commit_title` is `PR_TITLE`; PR-title validation therefore rejects an in-title number to prevent duplicates. The PR #1 merge subject contains a duplicated number because that policy was corrected after the first merge.
+- To preserve published history, CI allows the duplicate title only for the exact PR #1 merge SHA `3c62834af3160c5b1e212e02b2e04b8b316c98a8` and its recorded subject. All other merge commits require exactly one trailing PR number; future PR titles cannot contain that suffix.
+- Promotions to `staging` and `main` remain pending until their PR checks and merge commits complete.
 - Provider credentials and hosted environments have not yet been verified.
