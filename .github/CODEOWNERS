@@ -1,0 +1,4 @@
+* @defnotwig
+/.github/ @defnotwig
+/packages/database/migrations/ @defnotwig
+/packages/ledger/ @defnotwig

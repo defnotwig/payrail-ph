@@ -1,0 +1,28 @@
+name: Bug report
+description: Report a reproducible problem in PayRail PH.
+title: "fix: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not include secrets, customer data, provider payloads, or payment QR codes.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Include the affected phase and expected behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Safe reproduction steps
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Sanitized logs or screenshots
+      description: Remove credentials, personal data, raw provider payloads, and QR codes.
+    validations:
+      required: false

@@ -1,0 +1,25 @@
+name: Feature request
+description: Propose a scoped improvement to the sandbox portfolio.
+title: "feat: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and expected outcome
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: Financial, authorization, and recovery implications
+      description: State whether this changes payment behavior, data access, or provider interaction.
+    validations:
+      required: true
+  - type: checkboxes
+    id: boundaries
+    attributes:
+      label: Scope boundaries
+      options:
+        - label: This does not require live money, PAN/CVV, paid infrastructure, or an automatic upgrade.
+          required: true
