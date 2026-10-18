@@ -5,6 +5,8 @@ coverage/
 .turbo/
 .local/
 .playwright-mcp/
+.vercel/
+infrastructure/scheduler/.wrangler/
 .env
 .env.*
 !.env.example
