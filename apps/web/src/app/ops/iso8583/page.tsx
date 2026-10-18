@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PageHeader, StatusBadge } from "../../../components/ui";
 import styles from "../ops.module.css";
 
 interface IsoField {
@@ -16,7 +17,7 @@ export default function Iso8583LabPage() {
   const [amount, setAmount] = useState("500.00");
   const [stan, setStan] = useState("123456");
   const [terminalId, setTerminalId] = useState("TERM0001");
-  const [rawWireHex, _setRawWireHex] = useState(
+  const [rawWireHex] = useState(
     "30323030373233383030303030303030303030303030303030303035303030303130313831373330303031323334353631373330303031303138353339395041595241494c54455354315445524d303030315041595241494c4d455243483030313630383032325245463d5041595241494c5445535431",
   );
 
@@ -120,18 +121,11 @@ export default function Iso8583LabPage() {
 
   return (
     <div>
-      <div className={styles.headerSection}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <h1 className={styles.pageTitle}>ISO 8583 Financial Message Protocol Lab</h1>
-            <p className={styles.pageSubtitle}>
-              Interactive ISO 8583 message packer, unpacker, primary bitmap analyzer, and financial
-              field mapper.
-            </p>
-          </div>
-          <span className={styles.badgePill}>ISO 8583:1987 / 1993 STANDARD</span>
-        </div>
-      </div>
+      <PageHeader
+        title="ISO 8583 Financial Message Protocol Lab"
+        subtitle="Interactive ISO 8583 message packer, unpacker, primary bitmap analyzer, and financial field mapper."
+        actions={<StatusBadge status="SUCCEEDED" customLabel="ISO 8583:1987 / 1993 STANDARD" />}
+      />
 
       <div className={styles.gridTwoCol}>
         <div className={styles.card}>
@@ -145,9 +139,10 @@ export default function Iso8583LabPage() {
                 htmlFor="mti-select"
                 style={{
                   fontSize: "12px",
-                  color: "#94a3b8",
+                  color: "var(--color-text-secondary, #475569)",
                   display: "block",
                   marginBottom: "6px",
+                  fontWeight: 600,
                 }}
               >
                 Message Type Identifier (MTI)
@@ -172,9 +167,10 @@ export default function Iso8583LabPage() {
                   htmlFor="amount-input"
                   style={{
                     fontSize: "12px",
-                    color: "#94a3b8",
+                    color: "var(--color-text-secondary, #475569)",
                     display: "block",
                     marginBottom: "6px",
+                    fontWeight: 600,
                   }}
                 >
                   Amount (PHP)
@@ -185,6 +181,7 @@ export default function Iso8583LabPage() {
                   className={styles.inputField}
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
+                  style={{ fontVariantNumeric: "tabular-nums" }}
                 />
               </div>
               <div>
@@ -192,9 +189,10 @@ export default function Iso8583LabPage() {
                   htmlFor="stan-input"
                   style={{
                     fontSize: "12px",
-                    color: "#94a3b8",
+                    color: "var(--color-text-secondary, #475569)",
                     display: "block",
                     marginBottom: "6px",
+                    fontWeight: 600,
                   }}
                 >
                   STAN (6 digits)
@@ -205,6 +203,7 @@ export default function Iso8583LabPage() {
                   className={styles.inputField}
                   value={stan}
                   onChange={(e) => setStan(e.target.value)}
+                  style={{ fontVariantNumeric: "tabular-nums" }}
                 />
               </div>
             </div>
@@ -214,9 +213,10 @@ export default function Iso8583LabPage() {
                 htmlFor="terminal-id-input"
                 style={{
                   fontSize: "12px",
-                  color: "#94a3b8",
+                  color: "var(--color-text-secondary, #475569)",
                   display: "block",
                   marginBottom: "6px",
+                  fontWeight: 600,
                 }}
               >
                 Terminal ID
@@ -237,7 +237,13 @@ export default function Iso8583LabPage() {
             <h2 className={styles.cardTitle}>64-Bit Primary Bitmap Analysis</h2>
             <span className={styles.badgePill}>HEX: 7238000000000000</span>
           </div>
-          <p style={{ fontSize: "12px", color: "#94a3b8", margin: "0 0 12px 0" }}>
+          <p
+            style={{
+              fontSize: "12px",
+              color: "var(--color-text-secondary, #475569)",
+              margin: "0 0 12px 0",
+            }}
+          >
             The 64-bit bitmap dictates which Data Elements (DE) are active in the payload. Active
             bits indicate field presence.
           </p>
@@ -246,10 +252,10 @@ export default function Iso8583LabPage() {
               display: "grid",
               gridTemplateColumns: "repeat(8, 1fr)",
               gap: "4px",
-              background: "#090d16",
+              background: "#f8fafc",
               padding: "12px",
               borderRadius: "6px",
-              border: "1px solid #1e293b",
+              border: "1px solid #e2e8f0",
             }}
           >
             {Array.from({ length: 64 }, (_, i) => {
@@ -262,11 +268,11 @@ export default function Iso8583LabPage() {
                     padding: "4px",
                     textAlign: "center",
                     fontSize: "11px",
-                    borderRadius: "3px",
-                    background: isActive ? "rgba(59, 130, 246, 0.3)" : "rgba(255, 255, 255, 0.03)",
-                    color: isActive ? "#60a5fa" : "#475569",
-                    border: isActive ? "1px solid #3b82f6" : "1px solid transparent",
-                    fontWeight: isActive ? 600 : 400,
+                    borderRadius: "4px",
+                    background: isActive ? "#eff6ff" : "#ffffff",
+                    color: isActive ? "#0f52ba" : "#94a3b8",
+                    border: isActive ? "1px solid #bfdbfe" : "1px solid #e2e8f0",
+                    fontWeight: isActive ? 700 : 400,
                   }}
                   title={`Field ${fieldNum}: ${isActive ? "PRESENT" : "ABSENT"}`}
                 >
@@ -287,27 +293,27 @@ export default function Iso8583LabPage() {
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>DE #</th>
-                <th>Field Name</th>
-                <th>Unpacked Value</th>
-                <th>Wire Encoding</th>
-                <th>Description</th>
+                <th scope="col">DE #</th>
+                <th scope="col">Field Name</th>
+                <th scope="col">Unpacked Value</th>
+                <th scope="col">Wire Encoding</th>
+                <th scope="col">Description</th>
               </tr>
             </thead>
             <tbody>
               {parsedFields.map((field) => (
                 <tr key={field.number}>
                   <td>
-                    <b>DE {field.number}</b>
+                    <strong>DE {field.number}</strong>
                   </td>
                   <td>{field.name}</td>
                   <td>
-                    <code style={{ color: "#38bdf8" }}>{field.value}</code>
+                    <code style={{ color: "#0f52ba", fontWeight: 600 }}>{field.value}</code>
                   </td>
                   <td>
                     <code>{field.raw}</code>
                   </td>
-                  <td style={{ color: "#94a3b8" }}>{field.desc}</td>
+                  <td style={{ color: "var(--color-text-secondary, #475569)" }}>{field.desc}</td>
                 </tr>
               ))}
             </tbody>
