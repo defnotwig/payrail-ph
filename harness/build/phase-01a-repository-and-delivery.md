@@ -34,8 +34,8 @@ Publish the verified Phase 00/01 foundation as `defnotwig/payrail-ph`, establish
 2. Create the empty public repository, preserve current history, publish all four branches, and set `main` as default.
 3. Add project guidance and public README/license material.
 4. Add policy scripts and tests, pin GitHub Actions to immutable revisions, and run the full local baseline.
-5. Obtain an independent read-only Codex review, record the exact base/diff evidence, open the PR to `dev`, and merge with a merge commit after checks pass.
-6. Promote `dev` → `staging` → `main` through real PRs, then configure protections and verify settings.
+5. Obtain an independent read-only Codex review, record the exact base/diff evidence, and open the PR to `dev`. After the required checks pass, configure and verify protections on `dev`, `staging`, and `main` before merging with a merge commit.
+6. Promote `dev` → `staging` → `main` through real PRs and verify the checks and merge commits on each promotion.
 7. Audit Vercel, Supabase, and Cloudflare access/capacity. Deploy only environments that can be provisioned safely within the approved free plans.
 
 ## Verification
@@ -80,5 +80,8 @@ GitHub Actions must pass for each PR head and each promoted branch merge SHA. Co
 
 - GitHub repository: `https://github.com/defnotwig/payrail-ph` (public; `main` default).
 - Branches were published from the verified foundation before new bootstrap changes.
+- Repository merge settings allow merge commits only, use the PR title/body for merge commits, and keep squash, rebase, and branch deletion disabled.
+- GitHub protections are active on `dev`, `staging`, and `main`: strict `verify` and `review-evidence` checks, PRs, resolved conversations, enforced administrator rules, no force pushes/deletion, and no linear-history requirement.
 - Initial CI runs for all four branches passed; see the phase build log for run links.
+- PR #1 is open from `personal/defnotwig` to `dev`; its current checked head and merge revision remain pending until final documentation updates and promotion.
 - Provider credentials and hosted environments have not yet been verified.
