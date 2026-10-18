@@ -13,6 +13,7 @@ import { CardsModule } from "./cards/cards.module";
 import { ReconciliationModule } from "./reconciliation/reconciliation.module";
 import { AuditModule } from "./audit/audit.module";
 import { Iso8583Module } from "./iso8583/iso8583.module";
+import { FeePolicyModule } from "./fees/fee-policy.module";
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { Iso8583Module } from "./iso8583/iso8583.module";
     ReconciliationModule,
     AuditModule,
     Iso8583Module,
+    FeePolicyModule,
   ],
 })
 export class AppModule {}
