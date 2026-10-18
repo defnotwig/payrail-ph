@@ -58,6 +58,7 @@ export class RefundsService {
    * 4. Compensating ledger journal entry posted on refund success.
    */
   async createRefund(dto: CreateRefundDto): Promise<RefundRecord> {
+    this._payMongoAdapter.assertRefundAvailable();
     const refundAmount = BigInt(dto.amountMinor);
     if (refundAmount <= 0n) {
       throw new BadRequestException("Refund amount must be strictly positive.");
@@ -77,12 +78,11 @@ export class RefundsService {
 
       // 1. Idempotency Check
       const idemRes = await client.query<{
-        id: string;
         request_fingerprint: string;
         result_reference: string | null;
         status: string;
       }>(
-        `SELECT id, request_fingerprint, result_reference, status
+        `SELECT request_fingerprint, result_reference, status
          FROM payrail_private.idempotency_records
          WHERE merchant_id = $1 AND operation = 'CREATE_REFUND' AND idempotency_key = $2
          FOR UPDATE`,
@@ -181,15 +181,25 @@ export class RefundsService {
       if (idemRes.rows.length === 0) {
         await client.query(
           `INSERT INTO payrail_private.idempotency_records
-             (id, merchant_id, operation, idempotency_key, request_fingerprint, result_reference, status)
-           VALUES ($1, $2, 'CREATE_REFUND', $3, $4, $5, 'PROCESSING')`,
-          [crypto.randomUUID(), dto.merchantId, dto.idempotencyKey, fingerprint, refundId],
+             (merchant_id, operation, idempotency_key, request_fingerprint, result_reference, status)
+          VALUES ($1, 'CREATE_REFUND', $2, $3, $4, 'PENDING')`,
+          [dto.merchantId, dto.idempotencyKey, fingerprint, refundId],
         );
       }
 
       // 5. Execute Provider Refund
       // Simulate or execute provider refund call
-      const providerRefundId = `ref_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
+      const providerPayment = await client.query<{ provider_payment_id: string }>(
+        `SELECT provider_payment_id FROM payrail_private.payment_attempts WHERE payment_intent_id=$1 AND provider='paymongo' ORDER BY created_at DESC LIMIT 1`,
+        [dto.paymentIntentId],
+      );
+      const providerResult = await this._payMongoAdapter.createRefund(
+        providerPayment.rows[0]?.provider_payment_id ?? "",
+        refundAmount,
+        dto.reason,
+        refundId,
+      );
+      const providerRefundId = providerResult.providerRefundId;
 
       // 6. Transition Refund State to SUCCEEDED
       await client.query(
@@ -229,7 +239,7 @@ export class RefundsService {
       // 9. Update Idempotency Record to SUCCESS
       await client.query(
         `UPDATE payrail_private.idempotency_records
-         SET status = 'SUCCESS', updated_at = clock_timestamp()
+         SET status = 'RESOLVED', updated_at = clock_timestamp()
          WHERE merchant_id = $1 AND operation = 'CREATE_REFUND' AND idempotency_key = $2`,
         [dto.merchantId, dto.idempotencyKey],
       );

@@ -87,6 +87,11 @@ test("allows only the documented promotion flow and urgent fixes", () => {
   assert.equal(isPromotionAllowed("dev", "staging"), true);
   assert.equal(isPromotionAllowed("staging", "main"), true);
   assert.equal(isPromotionAllowed("fix/provider-outage", "main"), true);
+  assert.equal(isPromotionAllowed("codex/paymo-financial", "personal/defnotwig"), true);
+  assert.equal(isPromotionAllowed("codex/paymo-product", "personal/defnotwig"), true);
+  assert.equal(isPromotionAllowed("codex/paymo-security", "personal/defnotwig"), true);
+  assert.equal(isPromotionAllowed("codex/paymo-unrelated", "personal/defnotwig"), false);
+  assert.equal(isPromotionAllowed("codex/paymo-financial", "dev"), false);
   assert.equal(isPromotionAllowed("main", "dev"), false);
   assert.equal(isPromotionAllowed("dev", "main"), false);
   assert.equal(isPromotionAllowed("topic/money", "staging"), false);

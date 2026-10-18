@@ -1,4 +1,9 @@
-import { Injectable, Logger } from "@nestjs/common";
+import {
+  Injectable,
+  Optional,
+  ServiceUnavailableException,
+  NotImplementedException,
+} from "@nestjs/common";
 import * as crypto from "node:crypto";
 
 export interface QrPhPaymentResult {
@@ -7,6 +12,13 @@ export interface QrPhPaymentResult {
   status: string;
   qrCodeUrl?: string | undefined;
   testUrl?: string | undefined;
+}
+export interface ProviderOperation {
+  key: string;
+  onProgress: (progress: {
+    providerPaymentIntentId?: string;
+    providerPaymentMethodId?: string;
+  }) => Promise<void>;
 }
 
 interface PayMongoResource<T> {
@@ -31,12 +43,27 @@ interface PaymentIntentAttributes {
 
 @Injectable()
 export class PayMongoAdapter {
-  private readonly logger = new Logger(PayMongoAdapter.name);
   private readonly secretKey: string;
   private readonly baseUrl = "https://api.paymongo.com/v1";
 
-  constructor(secretKey?: string) {
+  readonly mode: "fixture" | "sandbox";
+  readonly account: string;
+  constructor(@Optional() secretKey?: string, @Optional() mode?: "fixture" | "sandbox") {
     this.secretKey = secretKey || process.env.PAYMONGO_SECRET_KEY || "sk_test_placeholder";
+    this.mode = mode || (process.env.PAYMENTS_ADAPTER_MODE === "fixture" ? "fixture" : "sandbox");
+    this.account = this.mode;
+  }
+  assertAvailable() {
+    if (this.mode === "fixture") {
+      if (
+        process.env.NODE_ENV !== "test" &&
+        (process.env.PAYRAIL_ALLOW_LOCAL_FIXTURES !== "1" ||
+          !/^http:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(process.env.WEB_ORIGIN || "") ||
+          process.env.VERCEL)
+      )
+        throw new ServiceUnavailableException("Fixtures require explicit local-only runtime");
+    } else if (!this.secretKey.startsWith("sk_test_") || this.secretKey === "sk_test_placeholder")
+      throw new ServiceUnavailableException("Qualified PayMongo test credentials are required");
   }
 
   private getAuthHeader(): string {
@@ -47,28 +74,31 @@ export class PayMongoAdapter {
     amountMinor: bigint,
     currency = "PHP",
     description = "PayRail PH Test QR Payment",
+    operation?: ProviderOperation,
   ): Promise<QrPhPaymentResult> {
-    if (this.secretKey === "sk_test_placeholder") {
-      this.logger.warn(
-        "Using synthetic PayMongo QR Ph simulator (PAYMONGO_SECRET_KEY is placeholder)",
-      );
-      const mockPiId = `pi_mock_${crypto.randomBytes(12).toString("hex")}`;
-      const mockPmId = `pm_mock_${crypto.randomBytes(12).toString("hex")}`;
+    this.assertAvailable();
+    if (amountMinor <= 0n || amountMinor > BigInt(Number.MAX_SAFE_INTEGER) || currency !== "PHP")
+      throw new Error("Unsupported exact PHP amount");
+    if (this.mode === "fixture") {
+      const mockPiId = `pi_fixture_${crypto.randomBytes(12).toString("hex")}`;
+      const mockPmId = `pm_fixture_${crypto.randomBytes(12).toString("hex")}`;
       const mockTestToken = crypto.randomBytes(16).toString("hex");
-
+      await operation?.onProgress({
+        providerPaymentIntentId: mockPiId,
+        providerPaymentMethodId: mockPmId,
+      });
       return {
         providerPaymentIntentId: mockPiId,
         providerPaymentMethodId: mockPmId,
         status: "awaiting_next_action",
-        qrCodeUrl:
-          "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
-        testUrl: `https://test.paymongo.com/qrph/${mockTestToken}`,
+        testUrl: `http://localhost/fixture/qrph/${mockTestToken}`,
       };
     }
 
     // 1. Create PaymentIntent
     const piResponse = await fetch(`${this.baseUrl}/payment_intents`, {
       method: "POST",
+      signal: AbortSignal.timeout(10000),
       headers: {
         Authorization: this.getAuthHeader(),
         "Content-Type": "application/json",
@@ -81,6 +111,7 @@ export class PayMongoAdapter {
             currency,
             payment_method_allowed: ["qrph"],
             description,
+            metadata: { payrail_operation_key: operation?.key },
           },
         },
       }),
@@ -95,10 +126,12 @@ export class PayMongoAdapter {
 
     const piData = (await piResponse.json()) as PayMongoResource<Record<string, unknown>>;
     const paymentIntentId = piData.data.id;
+    await operation?.onProgress({ providerPaymentIntentId: paymentIntentId });
 
     // 2. Create PaymentMethod
     const pmResponse = await fetch(`${this.baseUrl}/payment_methods`, {
       method: "POST",
+      signal: AbortSignal.timeout(10000),
       headers: {
         Authorization: this.getAuthHeader(),
         "Content-Type": "application/json",
@@ -122,12 +155,17 @@ export class PayMongoAdapter {
 
     const pmData = (await pmResponse.json()) as PayMongoResource<Record<string, unknown>>;
     const paymentMethodId = pmData.data.id;
+    await operation?.onProgress({
+      providerPaymentIntentId: paymentIntentId,
+      providerPaymentMethodId: paymentMethodId,
+    });
 
     // 3. Attach PaymentMethod to PaymentIntent
     const attachResponse = await fetch(
       `${this.baseUrl}/payment_intents/${paymentIntentId}/attach`,
       {
         method: "POST",
+        signal: AbortSignal.timeout(10000),
         headers: {
           Authorization: this.getAuthHeader(),
           "Content-Type": "application/json",
@@ -159,6 +197,24 @@ export class PayMongoAdapter {
       testUrl: nextAction?.code?.test_url,
     };
   }
+  async createRefund(
+    _providerPaymentId: string,
+    _amountMinor: bigint,
+    _reason: string,
+    _operationKey: string,
+  ): Promise<{ providerRefundId: string; state: "SUCCEEDED" | "PENDING" }> {
+    this.assertAvailable();
+    if (this.mode !== "fixture")
+      throw new NotImplementedException(
+        "Provider refund capability has not been qualified; no refund submitted",
+      );
+    return { providerRefundId: `ref_fixture_${crypto.randomUUID()}`, state: "SUCCEEDED" };
+  }
+  assertRefundAvailable() {
+    this.assertAvailable();
+    if (this.mode !== "fixture")
+      throw new NotImplementedException("Provider refund capability has not been qualified");
+  }
 
   static verifySignature(
     rawBody: Buffer | string,
@@ -178,11 +234,17 @@ export class PayMongoAdapter {
     }, {});
 
     const timestamp = parts.t;
-    const expectedSig = parts.te || parts.li;
+    const expectedSig = parts.te;
 
     if (!timestamp || !expectedSig) {
       return false;
     }
+    if (
+      !/^\d+$/.test(timestamp) ||
+      Math.abs(Date.now() / 1000 - Number(timestamp)) > 300 ||
+      !/^[0-9a-f]{64}$/.test(expectedSig)
+    )
+      return false;
 
     const bodyString = typeof rawBody === "string" ? rawBody : rawBody.toString("utf8");
     const payloadToSign = `${timestamp}.${bodyString}`;

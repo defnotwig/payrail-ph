@@ -75,7 +75,7 @@ describe("DurableJobsService", () => {
         return Promise.resolve({ rows: [] });
       });
 
-      await service.failJob("job-1", "worker-1", new Error("503 Gateway Timeout"), true);
+      await service.failJob("job-1", "worker-1", "claim-1", new Error("503 Gateway Timeout"), true);
 
       expect(mockClient.query).toHaveBeenCalledWith(
         expect.stringContaining("SET state = 'RETRY_SCHEDULED'"),
@@ -101,7 +101,13 @@ describe("DurableJobsService", () => {
         return Promise.resolve({ rows: [] });
       });
 
-      await service.failJob("job-1", "worker-1", new Error("Persistent 500 error"), true);
+      await service.failJob(
+        "job-1",
+        "worker-1",
+        "claim-1",
+        new Error("Persistent 500 error"),
+        true,
+      );
 
       expect(mockClient.query).toHaveBeenCalledWith(
         expect.stringContaining("SET state = 'DEAD_LETTER'"),

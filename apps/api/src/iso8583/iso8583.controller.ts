@@ -1,9 +1,11 @@
-import { Body, Controller, Get, Post, Query } from "@nestjs/common";
-import type { Iso8583Service } from "./iso8583.service";
+import { Body, Controller, Get, Inject, Post, Query } from "@nestjs/common";
+import { Iso8583Service } from "./iso8583.service";
+import { Public } from "../auth/authorization";
 
 @Controller("v1/iso8583")
+@Public()
 export class Iso8583Controller {
-  constructor(private readonly isoService: Iso8583Service) {}
+  constructor(@Inject(Iso8583Service) private readonly isoService: Iso8583Service) {}
 
   @Post("pack")
   packMessage(@Body() body: { mti: string; fields: Record<number, string> }) {
