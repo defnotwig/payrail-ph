@@ -63,10 +63,10 @@ export const paymentTransitions: Record<PaymentState, PaymentState[]> = {
 };
 export interface CreatePaymentDto {
   amountMinor: string;
-  currency?: string;
-  orderNumber?: string;
-  description?: string;
-  merchantId?: string;
+  currency?: string | undefined;
+  orderNumber?: string | undefined;
+  description?: string | undefined;
+  merchantId?: string | undefined;
 }
 export interface PaymentIntentView {
   id: string;

@@ -1,32 +1,29 @@
-import { Controller, Get, Post, Param, Query, Headers } from "@nestjs/common";
-import type { ReconciliationService } from "./reconciliation.service";
-
+import { Controller, Get, Post, Param, Query, Inject, Req } from "@nestjs/common";
+import { ApiBearerAuth } from "@nestjs/swagger";
+import { ReconciliationService } from "./reconciliation.service";
+import { Permissions, type OperatorRequest } from "../auth/authorization";
+import { identifier, pageLimit, parseInput } from "../auth/validation";
 @Controller("reconciliation")
+@ApiBearerAuth()
 export class ReconciliationController {
-  constructor(private readonly reconciliationService: ReconciliationService) {}
-
+  constructor(
+    @Inject(ReconciliationService) private readonly reconciliation: ReconciliationService,
+  ) {}
   @Get("runs")
-  async getRuns(
-    @Headers("x-merchant-id") merchantId = "merchant_default",
-    @Query("limit") limit = "20",
-  ) {
-    const parsedLimit = Math.min(Math.max(Number.parseInt(limit, 10) || 20, 1), 50);
-    const runs = await this.reconciliationService.getRuns(merchantId, parsedLimit);
-    return { data: runs };
-  }
-
-  @Get("runs/:id/items")
-  async getRunItems(@Param("id") runId: string) {
-    const items = await this.reconciliationService.getItems(runId);
-    return { data: items };
-  }
-
-  @Post("runs")
-  async startRun(@Headers("x-merchant-id") merchantId = "merchant_default") {
-    const run = await this.reconciliationService.runReconciliation(merchantId);
+  @Permissions("reconciliation:read")
+  async getRuns(@Req() request: OperatorRequest, @Query("limit") limit?: string) {
     return {
-      message: "Reconciliation run completed successfully.",
-      data: run,
+      data: await this.reconciliation.getRuns(request.user.merchantId, pageLimit(limit, 50)),
     };
+  }
+  @Get("runs/:id/items")
+  @Permissions("reconciliation:read")
+  async getRunItems(@Param("id") id: string) {
+    return { data: await this.reconciliation.getItems(parseInput(identifier, id)) };
+  }
+  @Post("runs")
+  @Permissions("reconciliation:write")
+  async startRun(@Req() request: OperatorRequest) {
+    return { data: await this.reconciliation.runReconciliation(request.user.merchantId) };
   }
 }

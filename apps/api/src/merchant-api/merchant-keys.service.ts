@@ -1,4 +1,10 @@
-import { Inject, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from "@nestjs/common";
 import { PG_POOL } from "../database/database.constants";
 import type { DatabasePool } from "../database/database.pool";
 import * as crypto from "node:crypto";
@@ -7,8 +13,8 @@ export interface CreateApiKeyDto {
   merchantId: string;
   name: string;
   scopes?: string[] | undefined;
-  environment?: "test" | "live" | undefined;
-  keyType?: "public" | "secret" | undefined;
+  environment?: "test" | undefined;
+  keyType?: "secret" | undefined;
 }
 
 export interface ApiKeyCreatedResult {
@@ -44,15 +50,30 @@ export class MerchantKeysService {
    * Storage: Stores SHA-256 hash only; never stores plaintext API keys.
    */
   async createApiKey(dto: CreateApiKeyDto): Promise<ApiKeyCreatedResult> {
+    if (
+      (dto.environment && dto.environment !== "test") ||
+      (dto.keyType && dto.keyType !== "secret")
+    )
+      throw new BadRequestException("Only secret test keys are supported.");
     const environment = dto.environment || "test";
-    const typePrefix = dto.keyType === "public" ? "pk" : "sk";
+    const typePrefix = "sk";
     const keyPrefix = `${typePrefix}_${environment}_`;
     const randomEntropy = crypto.randomBytes(24).toString("base64url");
     const fullApiKey = `${keyPrefix}${randomEntropy}`;
 
     // SHA-256 Digest for storage & lookups
     const keyHash = crypto.createHash("sha256").update(fullApiKey).digest("hex");
-    const scopes = dto.scopes || ["payments:read", "payments:write"];
+    const scopes = dto.scopes || ["payments:read"];
+    if (
+      !dto.name ||
+      dto.name.length > 100 ||
+      scopes.length === 0 ||
+      scopes.some(
+        (scope) =>
+          !["payments:read", "payments:write", "refunds:read", "refunds:write"].includes(scope),
+      )
+    )
+      throw new BadRequestException("Invalid key name or scopes.");
 
     const res = await this.pool.query<{
       id: string;
@@ -87,7 +108,7 @@ export class MerchantKeysService {
   }
 
   /**
-   * Validates an incoming API key via constant-time SHA-256 comparison against active keys.
+   * Validates a high-entropy API key by looking up its SHA-256 digest among active keys.
    */
   async validateApiKey(apiKey: string): Promise<{
     id: string;
@@ -95,7 +116,7 @@ export class MerchantKeysService {
     scopes: string[];
     environment: string;
   }> {
-    if (!apiKey || typeof apiKey !== "string") {
+    if (!apiKey || typeof apiKey !== "string" || !/^sk_test_[a-zA-Z0-9_-]{16,64}$/.test(apiKey)) {
       throw new UnauthorizedException("Missing or invalid API key.");
     }
 
@@ -110,13 +131,20 @@ export class MerchantKeysService {
       `SELECT id, merchant_id, scopes, environment
        FROM payrail_private.merchant_api_keys
        WHERE key_hash = $1
+         AND environment = 'test' AND key_prefix = 'sk_test_'
          AND revoked_at IS NULL
          AND (expires_at IS NULL OR expires_at > clock_timestamp())`,
       [keyHash],
     );
 
     const r = res.rows[0];
-    if (!r) {
+    if (
+      r?.environment !== "test" ||
+      r.scopes.some(
+        (scope) =>
+          !["payments:read", "payments:write", "refunds:read", "refunds:write"].includes(scope),
+      )
+    ) {
       throw new UnauthorizedException("Invalid, expired, or revoked API key.");
     }
     return {

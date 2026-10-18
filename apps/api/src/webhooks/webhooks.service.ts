@@ -66,10 +66,7 @@ export class WebhooksService {
 
     const bodyString = typeof rawBody === "string" ? rawBody : rawBody.toString("utf8");
 
-    // In local simulator / test placeholder mode, permit a test signature bypass if secret is placeholder
-    const isValid =
-      this.webhookSecret === "whsk_test_placeholder" ||
-      PayMongoAdapter.verifySignature(rawBody, signatureHeader, this.webhookSecret);
+    const isValid = PayMongoAdapter.verifySignature(rawBody, signatureHeader, this.webhookSecret);
 
     if (!isValid) {
       this.logger.warn("PayMongo webhook signature verification failed.");

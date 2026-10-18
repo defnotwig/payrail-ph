@@ -1,6 +1,7 @@
 import { BadRequestException, Controller, Headers, Inject, Post, Req } from "@nestjs/common";
 import type { RawBodyRequest } from "@nestjs/common";
 import { WebhooksService } from "./webhooks.service";
+import { Public } from "../auth/authorization";
 
 interface IncomingRequest {
   rawBody?: Buffer;
@@ -15,14 +16,14 @@ export class WebhooksController {
   ) {}
 
   @Post("paymongo")
+  @Public()
   async handlePayMongoWebhook(
     @Req() req: RawBodyRequest<IncomingRequest>,
     @Headers("paymongo-signature") signatureHeader: string,
   ) {
-    const rawBody =
-      req.rawBody || (req.body ? Buffer.from(JSON.stringify(req.body)) : Buffer.alloc(0));
+    const rawBody = req.rawBody;
 
-    if (!rawBody || rawBody.length === 0) {
+    if (!Buffer.isBuffer(rawBody) || rawBody.length === 0) {
       throw new BadRequestException("Missing raw request body.");
     }
 

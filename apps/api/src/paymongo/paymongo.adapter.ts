@@ -1,4 +1,10 @@
-import { Injectable, ServiceUnavailableException, NotImplementedException } from "@nestjs/common";
+import {
+  Injectable,
+  Logger,
+  Optional,
+  ServiceUnavailableException,
+  NotImplementedException,
+} from "@nestjs/common";
 import * as crypto from "node:crypto";
 
 export interface QrPhPaymentResult {
@@ -43,7 +49,7 @@ export class PayMongoAdapter {
 
   readonly mode: "fixture" | "sandbox";
   readonly account: string;
-  constructor(secretKey?: string, mode?: "fixture" | "sandbox") {
+  constructor(@Optional() secretKey?: string, @Optional() mode?: "fixture" | "sandbox") {
     this.secretKey = secretKey || process.env.PAYMONGO_SECRET_KEY || "sk_test_placeholder";
     this.mode = mode || (process.env.PAYMENTS_ADAPTER_MODE === "fixture" ? "fixture" : "sandbox");
     this.account = this.mode;
