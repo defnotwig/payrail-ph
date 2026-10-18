@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { MetricCard, MetricGrid, PageHeader, StatusBadge } from "../../../components/ui";
 import styles from "../ops.module.css";
 
 interface DurableJob {
@@ -23,6 +24,7 @@ interface DlqRecord {
 }
 
 export default function DurableJobsPage() {
+  const [replayNotice, setReplayNotice] = useState<string | null>(null);
   const [dlqRecords, setDlqRecords] = useState<DlqRecord[]>([
     {
       id: "dlq_0192a001",
@@ -71,56 +73,81 @@ export default function DurableJobsPage() {
 
   const handleReplayDlq = (id: string) => {
     setDlqRecords((prev) => prev.filter((r) => r.id !== id));
-    alert(`DLQ Job ${id} re-enqueued to active durable jobs with audit log trace.`);
+    setReplayNotice(
+      `DLQ Job ${id} safely re-enqueued to active durable jobs with audit log trace.`,
+    );
   };
 
   return (
     <div>
-      <div className={styles.headerSection}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <h1 className={styles.pageTitle}>Durable Jobs & Dead Letter Queue (DLQ)</h1>
-            <p className={styles.pageSubtitle}>
-              PostgreSQL transactional outbox pattern with SELECT FOR UPDATE SKIP LOCKED and worker
-              lease fencing.
-            </p>
-          </div>
-          <span className={styles.badgeSuccess}>WORKER POOL: 3 NODES ACTIVE</span>
-        </div>
-      </div>
+      <PageHeader
+        title="Durable Jobs & Dead Letter Queue (DLQ)"
+        subtitle="PostgreSQL transactional outbox pattern with SELECT FOR UPDATE SKIP LOCKED and worker lease fencing."
+        actions={<StatusBadge status="SUCCEEDED" customLabel="WORKER POOL: 3 NODES ACTIVE" />}
+      />
 
-      <div className={styles.statsGrid}>
-        <div className={styles.statCard}>
-          <div className={styles.statLabel}>Active Durable Jobs</div>
-          <div className={styles.statValue}>3 JOBS</div>
-          <div className={styles.statSubtext}>1 Processing · 1 Pending · 1 Completed</div>
-        </div>
-        <div className={styles.statCard}>
-          <div className={styles.statLabel}>Worker Lease Strategy</div>
-          <div className={styles.statValue} style={{ fontSize: "16px", color: "#60a5fa" }}>
-            SKIP LOCKED
-          </div>
-          <div className={styles.statSubtext}>30s Lease TTL · Zero worker collisions</div>
-        </div>
-        <div className={styles.statCard}>
-          <div className={styles.statLabel}>Retry Backoff Model</div>
-          <div className={styles.statValue} style={{ fontSize: "16px", color: "#34d399" }}>
-            2^N * 1s + Jitter
-          </div>
-          <div className={styles.statSubtext}>Prevents thundering herd on downstream</div>
-        </div>
-        <div className={styles.statCard}>
-          <div className={styles.statLabel}>Dead Letter Queue</div>
-          <div
-            className={styles.statValue}
-            style={{ color: dlqRecords.length > 0 ? "#f87171" : "#34d399" }}
+      {replayNotice && (
+        <div
+          style={{
+            background: "#eff6ff",
+            border: "1px solid #bfdbfe",
+            borderRadius: "8px",
+            padding: "12px 16px",
+            marginBottom: "20px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            fontSize: "13px",
+            color: "#1e40af",
+          }}
+          role="status"
+        >
+          <span>✓ {replayNotice}</span>
+          <button
+            type="button"
+            onClick={() => setReplayNotice(null)}
+            style={{
+              background: "none",
+              border: "none",
+              color: "#1e40af",
+              fontSize: "16px",
+              cursor: "pointer",
+            }}
+            aria-label="Dismiss notice"
           >
-            {dlqRecords.length} QUARANTINED
-          </div>
-          <div className={styles.statSubtext}>Preserves worker queue throughput</div>
+            ×
+          </button>
         </div>
-      </div>
+      )}
 
+      <MetricGrid>
+        <MetricCard
+          label="Active Durable Jobs"
+          value="3 JOBS"
+          metadata="1 Processing · 1 Pending · 1 Completed"
+        />
+        <MetricCard
+          label="Worker Lease Strategy"
+          value={<span style={{ color: "#0f52ba" }}>SKIP LOCKED</span>}
+          metadata="30s Lease TTL · Zero worker collisions"
+        />
+        <MetricCard
+          label="Retry Backoff Model"
+          value={<span style={{ color: "#166534" }}>2^N * 1s + Jitter</span>}
+          metadata="Prevents thundering herd on downstream"
+        />
+        <MetricCard
+          label="Dead Letter Queue"
+          value={
+            <span style={{ color: dlqRecords.length > 0 ? "#dc2626" : "#166534" }}>
+              {dlqRecords.length} QUARANTINED
+            </span>
+          }
+          metadata="Preserves worker queue throughput"
+        />
+      </MetricGrid>
+
+      {/* Active Jobs Queue */}
       <div className={styles.card}>
         <div className={styles.cardHeader}>
           <h2 className={styles.cardTitle}>Durable Jobs Queue (payrail_private.durable_jobs)</h2>
@@ -130,12 +157,12 @@ export default function DurableJobsPage() {
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>Job ID</th>
-                <th>Type</th>
-                <th>Attempts</th>
-                <th>Leased Worker</th>
-                <th>Next Run</th>
-                <th>Status</th>
+                <th scope="col">Job ID</th>
+                <th scope="col">Type</th>
+                <th scope="col">Attempts</th>
+                <th scope="col">Leased Worker</th>
+                <th scope="col">Next Run</th>
+                <th scope="col">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -145,7 +172,7 @@ export default function DurableJobsPage() {
                     <code>{job.id}</code>
                   </td>
                   <td>
-                    <b>{job.type}</b>
+                    <strong>{job.type}</strong>
                   </td>
                   <td>
                     {job.attempts} / {job.maxAttempts}
@@ -154,22 +181,21 @@ export default function DurableJobsPage() {
                     {job.leasedBy ? (
                       <code>{job.leasedBy}</code>
                     ) : (
-                      <span style={{ color: "#64748b" }}>Unassigned</span>
+                      <span style={{ color: "var(--color-text-muted, #64748b)" }}>Unassigned</span>
                     )}
                   </td>
                   <td>{job.nextRunAt}</td>
                   <td>
-                    <span
-                      className={
+                    <StatusBadge
+                      status={
                         job.status === "COMPLETED"
-                          ? styles.badgeSuccess
+                          ? "SUCCEEDED"
                           : job.status === "PROCESSING"
-                            ? styles.badgePill
-                            : styles.badgeSandbox
+                            ? "PROCESSING"
+                            : "AWAITING_PAYMENT"
                       }
-                    >
-                      {job.status}
-                    </span>
+                      customLabel={job.status}
+                    />
                   </td>
                 </tr>
               ))}
@@ -178,6 +204,7 @@ export default function DurableJobsPage() {
         </div>
       </div>
 
+      {/* Dead Letter Queue */}
       <div className={styles.card}>
         <div className={styles.cardHeader}>
           <h2 className={styles.cardTitle}>
@@ -194,9 +221,9 @@ export default function DurableJobsPage() {
               <div
                 key={item.id}
                 style={{
-                  background: "#090d16",
-                  border: "1px solid #ef4444",
-                  borderRadius: "6px",
+                  background: "#fef2f2",
+                  border: "1px solid #fecaca",
+                  borderRadius: "8px",
                   padding: "16px",
                 }}
               >
@@ -205,12 +232,14 @@ export default function DurableJobsPage() {
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
-                    marginBottom: "8px",
+                    marginBottom: "10px",
+                    flexWrap: "wrap",
+                    gap: "8px",
                   }}
                 >
                   <div>
                     <span className={styles.badgeDanger}>{item.id}</span>
-                    <b style={{ marginLeft: "10px", color: "#ffffff" }}>{item.jobType}</b>
+                    <strong style={{ marginLeft: "10px", color: "#991b1b" }}>{item.jobType}</strong>
                     <span style={{ fontSize: "12px", color: "#64748b", marginLeft: "10px" }}>
                       {item.failedAt}
                     </span>
@@ -223,7 +252,14 @@ export default function DurableJobsPage() {
                     Replay Job
                   </button>
                 </div>
-                <div style={{ color: "#f87171", fontSize: "13px", marginBottom: "8px" }}>
+                <div
+                  style={{
+                    color: "#991b1b",
+                    fontSize: "13px",
+                    marginBottom: "8px",
+                    fontWeight: 500,
+                  }}
+                >
                   {item.errorTrace}
                 </div>
                 <div className={styles.codeBlock} style={{ fontSize: "11px" }}>
@@ -233,7 +269,13 @@ export default function DurableJobsPage() {
             ))}
           </div>
         ) : (
-          <div style={{ textAlign: "center", padding: "32px", color: "#64748b" }}>
+          <div
+            style={{
+              textAlign: "center",
+              padding: "32px",
+              color: "var(--color-text-muted, #64748b)",
+            }}
+          >
             No quarantined jobs in Dead Letter Queue. Worker pipeline running at 100% capacity.
           </div>
         )}

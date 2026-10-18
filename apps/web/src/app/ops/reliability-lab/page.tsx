@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { MetricGrid, PageHeader, StatusBadge } from "../../../components/ui";
 import styles from "../ops.module.css";
 
 interface LogEntry {
@@ -204,38 +205,38 @@ export default function ReliabilityLabPage() {
 
   return (
     <div>
-      <div className={styles.headerSection}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <h1 className={styles.pageTitle}>Interactive Reliability & Chaos Lab</h1>
-            <p className={styles.pageSubtitle}>
-              Live interactive demonstration of distributed systems fault tolerance, row locks,
-              outbox backoff, DLQ, and circuit breaking.
-            </p>
-          </div>
+      <PageHeader
+        title="Interactive Reliability & Chaos Lab"
+        subtitle="Live interactive demonstration of distributed systems fault tolerance, row locks, outbox backoff, DLQ, and circuit breaking."
+        actions={
           <div className={styles.flexRow}>
-            <span
-              className={
+            <StatusBadge
+              status={
                 circuitState === "CLOSED"
-                  ? styles.badgeSuccess
+                  ? "SUCCEEDED"
                   : circuitState === "OPEN"
-                    ? styles.badgeDanger
-                    : styles.badgePill
+                    ? "FAILED"
+                    : "PROCESSING"
               }
-            >
-              CIRCUIT: {circuitState}
-            </span>
+              customLabel={`CIRCUIT: ${circuitState}`}
+            />
             <span className={dlqCount > 0 ? styles.badgeDanger : styles.badgePill}>
               DLQ: {dlqCount} JOBS
             </span>
           </div>
-        </div>
-      </div>
+        }
+      />
 
-      <div className={styles.statsGrid}>
+      <MetricGrid>
         <div className={styles.statCard}>
           <div className={styles.statLabel}>Concurrent Webhooks Test</div>
-          <p style={{ fontSize: "12px", color: "#94a3b8", margin: "4px 0 12px 0" }}>
+          <p
+            style={{
+              fontSize: "12px",
+              color: "var(--color-text-secondary, #475569)",
+              margin: "4px 0 12px 0",
+            }}
+          >
             Test PostgreSQL row locks and webhook idempotency under heavy parallel delivery.
           </p>
           <button
@@ -251,7 +252,13 @@ export default function ReliabilityLabPage() {
 
         <div className={styles.statCard}>
           <div className={styles.statLabel}>Exponential Backoff & Jitter</div>
-          <p style={{ fontSize: "12px", color: "#94a3b8", margin: "4px 0 12px 0" }}>
+          <p
+            style={{
+              fontSize: "12px",
+              color: "var(--color-text-secondary, #475569)",
+              margin: "4px 0 12px 0",
+            }}
+          >
             Simulate transient network timeouts and inspect randomized backoff scheduling.
           </p>
           <button
@@ -267,7 +274,13 @@ export default function ReliabilityLabPage() {
 
         <div className={styles.statCard}>
           <div className={styles.statLabel}>Poison Pill Quarantine</div>
-          <p style={{ fontSize: "12px", color: "#94a3b8", margin: "4px 0 12px 0" }}>
+          <p
+            style={{
+              fontSize: "12px",
+              color: "var(--color-text-secondary, #475569)",
+              margin: "4px 0 12px 0",
+            }}
+          >
             Inject an unrecoverable payload to observe Dead Letter Queue quarantining.
           </p>
           <button
@@ -282,8 +295,14 @@ export default function ReliabilityLabPage() {
         </div>
 
         <div className={styles.statCard}>
-          <div className={styles.statLabel}>Circuit Breaker Toggle</div>
-          <p style={{ fontSize: "12px", color: "#94a3b8", margin: "4px 0 12px 0" }}>
+          <div className={styles.statLabel}>Circuit Breaker State</div>
+          <p
+            style={{
+              fontSize: "12px",
+              color: "var(--color-text-secondary, #475569)",
+              margin: "4px 0 12px 0",
+            }}
+          >
             Trip provider circuit breaker to demonstrate 0ms fast-fail protecting pool.
           </p>
           <button
@@ -300,22 +319,19 @@ export default function ReliabilityLabPage() {
                 : "✅ Recover Circuit"}
           </button>
         </div>
-      </div>
+      </MetricGrid>
 
       {dlqCount > 0 && (
-        <div
-          className={styles.card}
-          style={{ border: "1px solid #ef4444", background: "rgba(239, 68, 68, 0.05)" }}
-        >
+        <div className={styles.card} style={{ border: "1px solid #fca5a5", background: "#fef2f2" }}>
           <div className={styles.cardHeader}>
-            <h2 className={styles.cardTitle} style={{ color: "#f87171" }}>
+            <h2 className={styles.cardTitle} style={{ color: "#991b1b" }}>
               ⚠️ Dead Letter Queue Alert ({dlqCount} Quarantined Job)
             </h2>
             <button type="button" className={styles.buttonPrimary} onClick={replayDlq}>
               Replay Quarantined Job
             </button>
           </div>
-          <p style={{ fontSize: "13px", color: "#fca5a5", margin: 0 }}>
+          <p style={{ fontSize: "13px", color: "#991b1b", margin: 0 }}>
             Job ID <code>dlq_job_b1928a3f</code> exceeded 3 retries due to downstream 422 error.
             Quarantined to preserve worker pipeline throughput.
           </p>
@@ -347,17 +363,17 @@ export default function ReliabilityLabPage() {
           {logs.map((log, idx) => (
             <div key={idx} style={{ marginBottom: "6px" }}>
               <span style={{ color: "#64748b" }}>[{log.time}]</span>{" "}
-              <span style={{ color: "#f59e0b", fontWeight: "bold" }}>[{log.scenario}]</span>{" "}
+              <span style={{ color: "#38bdf8", fontWeight: "bold" }}>[{log.scenario}]</span>{" "}
               <span
                 style={{
                   color:
                     log.type === "success"
-                      ? "#34d399"
+                      ? "#86efac"
                       : log.type === "error"
-                        ? "#f87171"
+                        ? "#fca5a5"
                         : log.type === "warn"
-                          ? "#fbbf24"
-                          : "#38bdf8",
+                          ? "#fde047"
+                          : "#e2e8f0",
                 }}
               >
                 {log.message}

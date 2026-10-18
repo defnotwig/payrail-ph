@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 2,
+  "reviewedBaseSha": "e2dfa6263db2d7ef08da3071fcddaa47c6cde14e",
+  "reviewedDiffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "reviewer": "codex-subagent/independent-review",
+  "reviewSource": "separate-agent-review",
+  "reviewReport": "design-v2-promotion-records-review.md",
+  "reviewReportSha256": "a5d4cf2d4b3b7adedb2d69dcbb2d00c4201fe629bc0f832c3d1d0b7bd6316b1d",
+  "reviewedAt": "2026-10-18T16:46:00Z",
+  "verdict": "approve",
+  "findings": []
+}
