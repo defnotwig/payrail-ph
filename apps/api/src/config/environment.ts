@@ -7,6 +7,10 @@ const environmentSchema = z.object({
     .url()
     .refine((value) => ["postgres:", "postgresql:"].includes(new URL(value).protocol)),
   WEB_ORIGIN: z.string().url(),
+  PAYMONGO_SECRET_KEY: z.string().default("sk_test_placeholder"),
+  PAYMONGO_WEBHOOK_SECRET: z.string().default("whsk_test_placeholder"),
+  PAYMENTS_MODE: z.enum(["test"]).default("test"),
+  INTERNAL_SERVICE_SECRET: z.string().default("dev_internal_secret"),
 });
 
 export type Environment = z.infer<typeof environmentSchema>;
