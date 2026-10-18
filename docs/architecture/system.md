@@ -22,6 +22,14 @@ flowchart LR
 
 The API and web are deployable as separate Vercel Hobby projects when free account limits permit. The worker is also runnable locally. PostgreSQL owns payment state, webhook inbox, outbox/jobs, idempotency records, audit evidence, and ledger postings. Cloudflare holds only the recovery-trigger credential and never owns financial work.
 
+## Git and deployment boundaries
+
+The public repository uses `personal/defnotwig` → `dev` → `staging` → `main` promotion pull requests. Protected branch updates require CI, resolved review threads, and an independent Codex review record matching the exact base revision and source diff digest. GitHub merge commits preserve the reviewed commit history. The solo workflow has no second-human approval requirement.
+
+Dev and staging use separate private schemas, runtime roles, migration histories, memberships, cookies, webhook configuration, and Vercel project pairs within one nonproduction Supabase project. Main uses an isolated Supabase project. Supabase Auth identity is shared only between dev and staging. Trusted GitHub branch/environment configuration selects an environment; request headers cannot change it.
+
+Vercel web/API projects deploy only after CI passes for the branch's exact commit. Release evidence links the PR, merge revision, CI run, migration, and compatible web/API deployment pair. Cloudflare is enabled per environment only after durable job processing exists. All hosted environments remain sandbox-only; public projections are sanitized and read-only.
+
 ## Request and payment flow
 1. An authenticated merchant operator creates an order using server-authorized amount and currency.
 2. The API creates or returns an idempotent payment intent. Before any provider call, it commits a durable attempt and provider operation key.

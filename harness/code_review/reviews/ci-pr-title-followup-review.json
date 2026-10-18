@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 2,
+  "reviewedBaseSha": "3c62834af3160c5b1e212e02b2e04b8b316c98a8",
+  "reviewedDiffSha256": "8ce30854c36239f9b430694509984846528ce8dfb003af85a8c2eebc331160f5",
+  "reviewer": "codex-subagent/ci_policy_review",
+  "reviewSource": "separate-agent-review",
+  "reviewReport": "ci-pr-title-followup-review.md",
+  "reviewReportSha256": "357112906caaed7ebf73aae5604a3b3bf9e1a2ec82ad5b185e435e6e26323b85",
+  "reviewedAt": "2026-10-18T08:01:33Z",
+  "verdict": "approve",
+  "findings": []
+}
