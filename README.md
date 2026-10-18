@@ -70,7 +70,7 @@ Integration, concurrency, contract, end-to-end, sandbox, security, phase, and de
 personal/defnotwig → PR → dev → PR → staging → PR → main
 ```
 
-Use one implementation pull request per verified phase, Conventional Commit subjects and matching PR titles, current CI, and an independent Codex review record bound to the PR base and diff. GitHub accepts merge commits only, preserving individual commits and authorship. Urgent `fix/*` branches use the same checks and are synchronized downstream. See [CONTRIBUTING.md](CONTRIBUTING.md) for the worktree and promotion workflow.
+Use one implementation pull request per verified phase, Conventional Commit subjects and PR titles ending in their PR number (for example `docs(repo): update workflow (#12)`), current CI, and an independent Codex review record bound to the PR base and diff. Merge-commit-only and branch-protection settings are being established for this initial bootstrap; verify the live repository settings before relying on them. Urgent `fix/*` branches use the same checks and are synchronized downstream. See [CONTRIBUTING.md](CONTRIBUTING.md) for the worktree and promotion workflow.
 
 ## Hosted environments
 

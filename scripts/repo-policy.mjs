@@ -7,6 +7,27 @@ export function isConventionalCommitSubject(subject) {
   return typeof subject === "string" && commitPattern.test(subject);
 }
 
+export function isConventionalMergeCommitSubject(subject) {
+  return isConventionalCommitSubject(subject) && /\(#\d+\)$/.test(subject);
+}
+
+export function isConventionalPullRequestTitle(title, number) {
+  return (
+    isConventionalCommitSubject(title) &&
+    Number.isInteger(Number(number)) &&
+    Number(number) > 0 &&
+    title.endsWith(`(#${number})`)
+  );
+}
+
+export function isCommitRangeValid(commits) {
+  return commits.every(({ subject, parentCount }) =>
+    parentCount > 1
+      ? isConventionalMergeCommitSubject(subject)
+      : isConventionalCommitSubject(subject),
+  );
+}
+
 export function isPromotionAllowed(sourceBranch, targetBranch) {
   if (/^fix\/[a-z0-9][a-z0-9._/-]*$/.test(sourceBranch)) {
     return ["dev", "staging", "main"].includes(targetBranch);
@@ -17,15 +38,6 @@ export function isPromotionAllowed(sourceBranch, targetBranch) {
     (sourceBranch === "dev" && targetBranch === "staging") ||
     (sourceBranch === "staging" && targetBranch === "main")
   );
-}
-
-function gitSubjects(baseSha, headSha) {
-  return execFileSync("git", ["log", "--no-merges", "--format=%s", `${baseSha}..${headSha}`], {
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-  })
-    .split(/\r?\n/)
-    .filter(Boolean);
 }
 
 function gitSubject(commitSha) {
@@ -46,8 +58,17 @@ function gitParentCount(commitSha) {
   return Math.max(0, parents.length - 1);
 }
 
-function reportInvalidSubjects(subjects) {
-  const invalid = subjects.filter((subject) => !isConventionalCommitSubject(subject));
+function gitCommitShas(baseSha, headSha) {
+  return execFileSync("git", ["rev-list", "--reverse", `${baseSha}..${headSha}`], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  })
+    .split(/\r?\n/)
+    .filter(Boolean);
+}
+
+function reportInvalidSubjects(subjects, isValid = isConventionalCommitSubject) {
+  const invalid = subjects.filter((subject) => !isValid(subject));
   for (const subject of invalid) {
     console.error(`Invalid commit subject: ${subject}`);
   }
@@ -62,8 +83,10 @@ function validatePullRequest(env) {
   const headSha = env.PR_HEAD_SHA ?? "";
   let failures = 0;
 
-  if (!isConventionalCommitSubject(title)) {
-    console.error(`Invalid pull request title: ${title || "(empty)"}`);
+  if (!isConventionalPullRequestTitle(title, env.PR_NUMBER)) {
+    console.error(
+      `Invalid pull request title (expected Conventional Commit and (#${env.PR_NUMBER || "PR"})): ${title || "(empty)"}`,
+    );
     failures += 1;
   }
   if (!isPromotionAllowed(source, target)) {
@@ -74,7 +97,20 @@ function validatePullRequest(env) {
     console.error("Pull request base and head revisions are required.");
     failures += 1;
   } else {
-    failures += reportInvalidSubjects(gitSubjects(baseSha, headSha));
+    const commits = gitCommitShas(baseSha, headSha).map((commitSha) => ({
+      subject: gitSubject(commitSha),
+      parentCount: gitParentCount(commitSha),
+    }));
+    if (!isCommitRangeValid(commits)) {
+      for (const commit of commits) {
+        const valid =
+          commit.parentCount > 1
+            ? isConventionalMergeCommitSubject(commit.subject)
+            : isConventionalCommitSubject(commit.subject);
+        if (!valid) console.error(`Invalid commit subject: ${commit.subject}`);
+      }
+      failures += 1;
+    }
   }
 
   return failures;
@@ -84,19 +120,26 @@ function validatePush(env) {
   const headSha = env.GIT_HEAD || env.GITHUB_SHA || "HEAD";
   const beforeSha = env.GIT_BEFORE ?? "";
   const isZeroSha = /^0+$/.test(beforeSha);
-  const subjects = beforeSha && !isZeroSha ? gitSubjects(beforeSha, headSha) : [];
-
-  if (subjects.length > 0) {
-    return reportInvalidSubjects(subjects);
+  if (beforeSha && !isZeroSha) {
+    const commits = gitCommitShas(beforeSha, headSha).map((commitSha) => ({
+      subject: gitSubject(commitSha),
+      parentCount: gitParentCount(commitSha),
+    }));
+    if (isCommitRangeValid(commits)) return 0;
+    for (const commit of commits) {
+      const valid =
+        commit.parentCount > 1
+          ? isConventionalMergeCommitSubject(commit.subject)
+          : isConventionalCommitSubject(commit.subject);
+      if (!valid) console.error(`Invalid commit subject: ${commit.subject}`);
+    }
+    return 1;
   }
-  if (gitParentCount(headSha) > 1) {
-    console.log(
-      "Merge commit received; its pull request title and non-merge commits were checked by PR CI.",
-    );
-    return 0;
-  }
-
-  return reportInvalidSubjects([gitSubject(headSha)]);
+  const subject = gitSubject(headSha);
+  const merge = gitParentCount(headSha) > 1;
+  return merge
+    ? reportInvalidSubjects([subject], isConventionalMergeCommitSubject)
+    : reportInvalidSubjects([subject]);
 }
 
 export function runRepositoryPolicy(env = process.env) {

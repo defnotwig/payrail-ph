@@ -1,17 +1,57 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 
-export function reviewEvidenceMatches(evidence, { baseSha, diffSha256 }) {
+export function reviewEvidenceMatches(evidence, { baseSha, diffSha256, reportSha256, reportText }) {
   if (!evidence || typeof evidence !== "object") return false;
-  if (evidence.schemaVersion !== 1) return false;
+  if (evidence.schemaVersion !== 2) return false;
+  if (!/^[a-f0-9]{40}$/.test(baseSha)) return false;
+  if (!/^[a-f0-9]{64}$/.test(diffSha256)) return false;
   if (evidence.reviewedBaseSha !== baseSha) return false;
   if (evidence.reviewedDiffSha256 !== diffSha256) return false;
-  if (typeof evidence.reviewer !== "string" || !evidence.reviewer.startsWith("codex/")) {
+  if (
+    typeof evidence.reviewer !== "string" ||
+    !/^codex-subagent\/[a-z0-9_-]+$/.test(evidence.reviewer)
+  )
     return false;
-  }
+  if (evidence.reviewSource !== "separate-agent-review") return false;
+  if (typeof evidence.reviewReport !== "string" || !/^[a-z0-9-]+\.md$/.test(evidence.reviewReport))
+    return false;
+  if (
+    typeof evidence.reviewReportSha256 !== "string" ||
+    !/^[a-f0-9]{64}$/.test(evidence.reviewReportSha256)
+  )
+    return false;
+  if (!/^[a-f0-9]{64}$/.test(reportSha256) || evidence.reviewReportSha256 !== reportSha256)
+    return false;
+  const requiredReportLines = [
+    `Reviewer: ${evidence.reviewer}`,
+    `Reviewed base SHA: ${baseSha}`,
+    `Reviewed diff SHA-256: ${diffSha256}`,
+    "Verdict: APPROVE",
+  ];
+  if (typeof reportText !== "string") return false;
+  const reportLines = reportText.split(/\r?\n/);
+  if (
+    requiredReportLines.some(
+      (expected) => reportLines.filter((line) => line === expected).length !== 1,
+    )
+  )
+    return false;
+  const metadataPrefixes = [
+    "Reviewer: ",
+    "Reviewed base SHA: ",
+    "Reviewed diff SHA-256: ",
+    "Verdict: ",
+  ];
+  if (
+    metadataPrefixes.some(
+      (prefix) => reportLines.filter((line) => line.startsWith(prefix)).length !== 1,
+    )
+  )
+    return false;
   if (evidence.verdict !== "approve") return false;
   if (typeof evidence.reviewedAt !== "string" || Number.isNaN(Date.parse(evidence.reviewedAt))) {
     return false;
@@ -50,7 +90,11 @@ export function findMatchingReviewEvidence({ baseSha, headSha, root = process.cw
   for (const name of names) {
     try {
       const evidence = JSON.parse(readFileSync(resolve(evidenceRoot, name), "utf8"));
-      if (reviewEvidenceMatches(evidence, { baseSha, diffSha256 })) {
+      const reportPath = resolve(evidenceRoot, evidence.reviewReport ?? "");
+      if (!reportPath.startsWith(`${evidenceRoot}${sep}`)) continue;
+      const reportText = readFileSync(reportPath, "utf8");
+      const reportSha256 = createHash("sha256").update(reportText).digest("hex");
+      if (reviewEvidenceMatches(evidence, { baseSha, diffSha256, reportSha256, reportText })) {
         return { diffSha256, evidence };
       }
     } catch {
@@ -72,13 +116,13 @@ export function runReviewEvidenceCheck(env = process.env) {
   const { diffSha256, evidence } = findMatchingReviewEvidence({ baseSha, headSha });
   if (!evidence) {
     console.error(
-      `No independent approval matches base ${baseSha} and diff SHA-256 ${diffSha256}.`,
+      `No separate-agent review report matches base ${baseSha} and diff SHA-256 ${diffSha256}.`,
     );
     return 1;
   }
 
   console.log(
-    `Review evidence matches the current diff: ${evidence.reviewer} at ${evidence.reviewedAt}.`,
+    `Codex review record and report match the current diff: ${evidence.reviewer} at ${evidence.reviewedAt}.`,
   );
   return 0;
 }

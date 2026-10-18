@@ -23,8 +23,9 @@ Publish the verified Phase 00/01 foundation as `defnotwig/payrail-ph`, establish
 
 - PR promotion: `personal/defnotwig` → `dev` → `staging` → `main`; `fix/*` may target a protected branch and is synchronized downstream.
 - Required PR checks: `CI / verify` and `CI / review-evidence`.
-- Review record: JSON under `harness/code_review/reviews/`, matching the exact PR base SHA and SHA-256 of the binary diff excluding review records.
-- Merges: merge commit only. No squash, rebase merge, force push, protected-branch deletion, or routine admin bypass.
+- Review record: JSON under `harness/code_review/reviews/`, matching the exact PR base SHA and SHA-256 of the binary diff excluding review records. The record check binds evidence to the diff; a separate Codex reviewer provides process independence because this solo repository has no second GitHub reviewer identity.
+- Merges: merge commit only. PR titles include `(#PR_NUMBER)` and become the merge commit subject. No squash, rebase merge, force push, protected-branch deletion, or routine admin bypass.
+- CI validates every PR-range commit, including merge commits. Push validation checks merge-subject shape; the GitHub merge setting uses the PR title, which PR CI validates with the matching PR number.
 - No required second-human approval in the selected solo workflow.
 
 ## Implementation steps
@@ -33,7 +34,7 @@ Publish the verified Phase 00/01 foundation as `defnotwig/payrail-ph`, establish
 2. Create the empty public repository, preserve current history, publish all four branches, and set `main` as default.
 3. Add project guidance and public README/license material.
 4. Add policy scripts and tests, pin GitHub Actions to immutable revisions, and run the full local baseline.
-5. Obtain an independent read-only review, record the exact base/diff evidence, open the PR to `dev`, and merge with a merge commit after checks pass.
+5. Obtain an independent read-only Codex review, record the exact base/diff evidence, open the PR to `dev`, and merge with a merge commit after checks pass.
 6. Promote `dev` → `staging` → `main` through real PRs, then configure protections and verify settings.
 7. Audit Vercel, Supabase, and Cloudflare access/capacity. Deploy only environments that can be provisioned safely within the approved free plans.
 

@@ -8,22 +8,22 @@ The normal flow is `personal/defnotwig` → `dev` → `staging` → `main`. Open
 
 Keep the primary checkout available for release inspection and use a linked worktree for implementation. Each Git branch can be checked out in one worktree at a time. Give parallel worktrees distinct ports, ignored `.env` files, and isolated test databases. Before removing a worktree, preserve its branch and uncommitted work.
 
-PR titles and commit subjects use Conventional Commits:
+PR titles and commit subjects use Conventional Commits. After opening a PR, append its number so GitHub can use the same semantic title for the merge commit:
 
 ```text
-feat(payments): add guarded submission
+feat(payments): add guarded submission (#12)
 fix(jobs): fence stale worker writes
 docs(repo): explain promotion workflow
 test(ledger): cover duplicate posting
 ```
 
-Allowed types are `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `build`, `ci`, `chore`, and `revert`. Use a scope when it clarifies the area. Add `!` or a `BREAKING CHANGE` footer for breaking changes. CI checks PR titles, non-merge commit subjects, and allowed promotion sources.
+Allowed types are `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `build`, `ci`, `chore`, and `revert`. Use a scope when it clarifies the area. Add `!` or a `BREAKING CHANGE` footer for breaking changes. PR CI checks the numbered semantic title and every commit in the PR range, including existing merge commits. GitHub is configured to create merge subjects from the PR title; push CI checks semantic merge-subject format without querying GitHub for the merge-to-PR association.
 
 GitHub merges pull requests with merge commits. Do not squash or rebase-merge. Preserve the original commit authors and history.
 
 ## Review and verification
 
-Keep each PR focused on one phase or a small related maintenance change. Describe its behavior, financial effect, migrations, authorization changes, tests, and remaining limits. CI must pass for the exact PR head, and an independent Codex review record must match the PR base and binary diff digest. A source change after review needs a new review record. The record format is checked by `pnpm review:evidence`.
+Keep each PR focused on one phase or a small related maintenance change. Describe its behavior, financial effect, migrations, authorization changes, tests, and remaining limits. CI must pass for the exact PR head, and an independent Codex review record must match the PR base and binary diff digest. A source change after review needs a new review record. The record check binds the evidence to the exact diff; because this solo repository has no second GitHub reviewer identity, reviewer independence is established by the separate Codex review process and recorded report, not by a cryptographic GitHub identity check. `pnpm review:evidence` checks the record format and diff binding.
 
 For financial behavior, add a focused test first, observe it fail for the expected reason, implement the smallest safe change, then run the relevant suite and the workspace checks. Do not mark unavailable external checks as passing. Label evidence as local simulation, genuine provider sandbox activity, or deployed verification.
 
