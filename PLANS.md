@@ -79,3 +79,5 @@ PayMongo Phase 05 must verify QR creation/retrieval/test behavior, lookup, signa
 
 ## Phase evidence
 Every phase records revision, implementation, commands/results, external evidence, limitations, and next phase in harness/build-log.md. Label local simulation, genuine sandbox activity, and deployed evidence distinctly. Create a focused phase build file before implementation. Create ADRs alongside exercised decisions, not as upfront placeholders.
+
+Current qualification work adds PostgreSQL-backed checks for payment idempotency and webhook/state integrity, evidence-gated reconciliation, refund reservations, immutable balanced ledger postings, and worker claim-token fencing. Uncertain charge responses remain unresolved and a repeated idempotent request returns the existing operation; no provider failover is configured. Provider refunds remain fixture-only until a sandbox capability probe succeeds. A fee calculator exists only in test support and makes no claim about PayMongo fees.

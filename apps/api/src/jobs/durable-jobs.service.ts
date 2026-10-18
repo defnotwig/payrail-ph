@@ -20,6 +20,7 @@ export interface DurableJobRecord {
   maxAttempts: number;
   nextAttemptAt: string;
   lockedBy?: string | undefined;
+  claimToken?: string | undefined;
   lockedUntil?: string | undefined;
   lastError?: string | undefined;
   errorCode?: string | undefined;
@@ -83,6 +84,7 @@ export class DurableJobsService {
         max_attempts: number;
         next_attempt_at: Date;
         locked_by: string | null;
+        claim_token: string | null;
         locked_until: Date | null;
         last_error: string | null;
         error_code: string | null;
@@ -92,8 +94,8 @@ export class DurableJobsService {
         `WITH claimable AS (
            SELECT id
            FROM payrail_private.durable_jobs
-           WHERE state IN ('PENDING', 'RETRY_SCHEDULED')
-             AND next_attempt_at <= clock_timestamp()
+           WHERE (state IN ('PENDING', 'RETRY_SCHEDULED') AND next_attempt_at <= clock_timestamp())
+              OR (state='CLAIMED' AND locked_until <= clock_timestamp())
            ORDER BY next_attempt_at ASC
            LIMIT $1
            FOR UPDATE SKIP LOCKED
@@ -101,12 +103,13 @@ export class DurableJobsService {
          UPDATE payrail_private.durable_jobs j
          SET state = 'CLAIMED',
              locked_by = $2,
+             claim_token = gen_random_uuid(),
              locked_until = clock_timestamp() + ($3 * INTERVAL '1 second'),
              attempt_count = j.attempt_count + 1,
              updated_at = clock_timestamp()
          FROM claimable
          WHERE j.id = claimable.id
-         RETURNING j.*`,
+        RETURNING j.*`,
         [limit, workerId, leaseSeconds],
       );
 
@@ -121,6 +124,7 @@ export class DurableJobsService {
         maxAttempts: r.max_attempts,
         nextAttemptAt: r.next_attempt_at.toISOString(),
         lockedBy: r.locked_by || undefined,
+        claimToken: r.claim_token || undefined,
         lockedUntil: r.locked_until?.toISOString(),
         lastError: r.last_error || undefined,
         errorCode: r.error_code || undefined,
@@ -138,13 +142,14 @@ export class DurableJobsService {
   /**
    * Marks a claimed job as COMPLETED.
    */
-  async completeJob(jobId: string, workerId: string): Promise<void> {
-    await this.pool.query(
+  async completeJob(jobId: string, workerId: string, claimToken: string): Promise<void> {
+    const result = await this.pool.query(
       `UPDATE payrail_private.durable_jobs
-       SET state = 'COMPLETED', locked_by = NULL, locked_until = NULL, updated_at = clock_timestamp()
-       WHERE id = $1 AND (locked_by = $2 OR locked_by IS NULL)`,
-      [jobId, workerId],
+       SET state = 'COMPLETED', locked_by = NULL, locked_until = NULL, claim_token = NULL, updated_at = clock_timestamp()
+       WHERE id = $1 AND state='CLAIMED' AND locked_by = $2 AND claim_token=$3 AND locked_until > clock_timestamp()`,
+      [jobId, workerId, claimToken],
     );
+    if (!result.rowCount) throw new Error("Job claim is stale or not owned by this worker");
   }
 
   /**
@@ -152,7 +157,8 @@ export class DurableJobsService {
    */
   async failJob(
     jobId: string,
-    _workerId: string,
+    workerId: string,
+    claimToken: string,
     error: Error | string,
     isTransient = true,
   ): Promise<void> {
@@ -171,15 +177,15 @@ export class DurableJobsService {
       }>(
         `SELECT id, job_type, payload, attempt_count, max_attempts
          FROM payrail_private.durable_jobs
-         WHERE id = $1
+         WHERE id = $1 AND state='CLAIMED' AND locked_by=$2 AND claim_token=$3 AND locked_until > clock_timestamp()
          FOR UPDATE`,
-        [jobId],
+        [jobId, workerId, claimToken],
       );
 
       const job = res.rows[0];
       if (!job) {
         await client.query("ROLLBACK");
-        return;
+        throw new Error("Job claim is stale or not owned by this worker");
       }
 
       if (isTransient && job.attempt_count < job.max_attempts) {
@@ -194,6 +200,7 @@ export class DurableJobsService {
                next_attempt_at = clock_timestamp() + ($1 * INTERVAL '1 second'),
                locked_by = NULL,
                locked_until = NULL,
+               claim_token = NULL,
                last_error = $2,
                updated_at = clock_timestamp()
            WHERE id = $3`,
@@ -206,6 +213,7 @@ export class DurableJobsService {
            SET state = 'DEAD_LETTER',
                locked_by = NULL,
                locked_until = NULL,
+               claim_token = NULL,
                last_error = $1,
                updated_at = clock_timestamp()
            WHERE id = $2`,

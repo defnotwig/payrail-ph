@@ -44,8 +44,8 @@ describe("PayMongoAdapter", () => {
     expect(PayMongoAdapter.verifySignature("{}", "invalid_header", secret)).toBe(false);
   });
 
-  it("generates a valid QR Ph test simulator response in placeholder mode", async () => {
-    const adapter = new PayMongoAdapter();
+  it("requires explicit fixture mode and labels its references", async () => {
+    const adapter = new PayMongoAdapter("sk_test_placeholder", "fixture");
     const payment = await adapter.createQrPhPayment(10000n, "PHP", "Test Order");
 
     expect(payment.providerPaymentIntentId).toBeDefined();
@@ -53,7 +53,21 @@ describe("PayMongoAdapter", () => {
     expect(payment.providerPaymentMethodId.startsWith("pm_")).toBe(true);
     expect(payment.status).toBe("awaiting_next_action");
     expect(payment.testUrl).toBeDefined();
-    expect(payment.testUrl?.startsWith("https://test.paymongo.com/qrph/")).toBe(true);
-    expect(payment.qrCodeUrl).toBeDefined();
+    expect(payment.testUrl?.startsWith("http://localhost/")).toBe(true);
+    expect(payment.providerPaymentIntentId.startsWith("pi_fixture_")).toBe(true);
+  });
+  it("refuses placeholder and live credentials in sandbox mode", async () => {
+    await expect(
+      new PayMongoAdapter("sk_test_placeholder", "sandbox").createQrPhPayment(100n),
+    ).rejects.toThrow();
+    await expect(
+      new PayMongoAdapter("sk_live_forbidden", "sandbox").createQrPhPayment(100n),
+    ).rejects.toThrow();
+  });
+  it("rejects a correctly signed stale delivery", () => {
+    const t = 1;
+    const body = "{}";
+    const sig = crypto.createHmac("sha256", secret).update(`${t}.${body}`).digest("hex");
+    expect(PayMongoAdapter.verifySignature(body, `t=${t},te=${sig}`, secret)).toBe(false);
   });
 });
