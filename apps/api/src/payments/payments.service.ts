@@ -1,7 +1,15 @@
-import { ConflictException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
+import {
+  ConflictException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  Optional,
+} from "@nestjs/common";
 import { PG_POOL } from "../database/database.constants";
 import type { DatabasePool } from "../database/database.pool";
 import { PayMongoAdapter } from "../paymongo/paymongo.adapter";
+import { LedgerService } from "../ledger/ledger.service";
 import * as crypto from "node:crypto";
 
 export type PaymentState =
@@ -87,6 +95,7 @@ export class PaymentsService {
   constructor(
     @Inject(PG_POOL) private readonly pool: DatabasePool,
     @Inject(PayMongoAdapter) private readonly payMongoAdapter: PayMongoAdapter,
+    @Optional() @Inject(LedgerService) private readonly ledgerService?: LedgerService,
   ) {}
 
   private calculateFingerprint(body: Record<string, unknown>): string {
@@ -431,6 +440,27 @@ export class PaymentsService {
            WHERE id = (SELECT order_id FROM payrail_private.payment_intents WHERE id = $1)`,
           [paymentIntentId],
         );
+
+        if (this.ledgerService) {
+          const piRes = await client.query<{
+            merchant_id: string;
+            amount_minor: string;
+            currency: string;
+          }>(
+            `SELECT merchant_id, amount_minor, currency FROM payrail_private.payment_intents WHERE id = $1`,
+            [paymentIntentId],
+          );
+          const pi = piRes.rows[0];
+          if (pi) {
+            await this.ledgerService.postPaymentSuccess(
+              pi.merchant_id,
+              paymentIntentId,
+              pi.amount_minor,
+              pi.currency,
+              client,
+            );
+          }
+        }
       }
 
       await client.query("COMMIT");
