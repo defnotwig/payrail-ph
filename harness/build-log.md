@@ -20,5 +20,5 @@ Record factual evidence by phase. Label each item as local simulation, genuine p
 - Design QA (local browser): desktop 1487×1058 and mobile 390×844; no horizontal overflow from 320px through 1487px across nine checked widths; all five same-page links resolved; first keyboard focus showed a visible 3px cobalt outline; both optimized local images loaded; no Next image optimizer requests; zero browser console errors. Captures: `harness/design-qa/payrail-desktop.png` and `harness/design-qa/payrail-mobile.png`.
 - Evidence type: local simulation only. No PayMongo credentials, genuine provider sandbox activity, or deployment are configured. The reference-image critique connector rejected the 1.5 MB source at its 1 MB input limit; browser visual review was used.
 - Limitations: Docker engine unavailable; the isolated local PostgreSQL cluster is the supported local path. M0 remains incomplete because money primitives, authentication, and merchant isolation belong to later phases.
-- Commit: pending Phase 01 commit.
+- Implementation commit: 50b9a4d (`feat: add runnable PayRail PH foundation`).
 - Next: Phase 02 — money and SQL primitives.
