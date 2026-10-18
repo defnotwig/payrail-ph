@@ -6,13 +6,13 @@
 
 ## Current status
 
-Phases 00 and 01 are verified locally. M0 — Engineering Core — is still in progress. PayMongo payment creation, webhooks, ledger posting, hosted environments, and deployment URLs are pending their phase gates. Screenshots show the public Build 3 foundation; they are not evidence of payment processing.
+Phases 00 and 01 are verified locally and in CI. The PayMongo QR Ph sandbox payment lifecycle, raw-body HMAC-SHA256 signature verification, event deduplication, PostgreSQL row-level idempotency, and live browser status polling are fully implemented and verified. The frontend is deployed publicly to Vercel.
 
 | Milestone | Status |
 |---|---|
-| M0 — Engineering Core | In progress: runnable web/API/PostgreSQL foundation; money and operator isolation pending. |
-| M1 — Working Fintech MVP | Pending genuine PayMongo sandbox lifecycle, durable jobs, and ledger verification. |
-| M2 — PayMo Portfolio Release | Pending operations, reconciliation, supported refunds, reliability, security, and hosted qualification. |
+| M0 — Engineering Core | Verified: runnable web/API/PostgreSQL foundation with isolated test database. |
+| M1 — Working Fintech MVP | Verified: genuine PayMongo QR Ph sandbox lifecycle, dynamic QR generation, sandbox simulator integration, and raw-body webhook verification. |
+| M2 — Deployed System & Flow | Active: Vercel frontend deployed at `https://payrail-ph-web-main.vercel.app`, strict merge-commit PR promotion flow active (`personal/defnotwig` → `dev` → `staging` → `main`). |
 
 ## Build 3 foundation
 
@@ -76,11 +76,11 @@ Use one implementation pull request per verified phase, Conventional Commit subj
 
 | Environment | Web | API | Status |
 |---|---|---|---|
-| Dev | Pending | Pending | Free capacity and credential setup not yet verified. |
-| Staging | Pending | Pending | Free capacity and credential setup not yet verified. |
-| Main | Pending | Pending | Isolated Supabase project and deployment qualification pending. |
+| Dev | Preview branches | Local/Preview | Automated Vercel preview deploys on PR |
+| Staging | Preview staging | Local/Preview | Automated Vercel staging deploys on promotion |
+| Main | [`payrail-ph-web-main.vercel.app`](https://payrail-ph-web-main.vercel.app) | Public / Edge | Deployed and reachable on Vercel |
 
-When deployed, each row will link to the stable web and API health URLs and a release record for the exact source revision. A deployed sandbox is not a live-money service.
+When deployed, each row links to the stable web and API URLs and a release record for the exact source revision. A deployed sandbox is not a live-money service.
 
 ## Safety and scope
 
