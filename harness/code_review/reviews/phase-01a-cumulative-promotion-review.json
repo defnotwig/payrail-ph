@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 2,
+  "reviewedBaseSha": "75386a231e060f81b0ea4e8959fa92ca5c36ef96",
+  "reviewedDiffSha256": "755de497597e033deb4184f875fd3c78b2b75b89c96cb00898c461a7af48bebb",
+  "reviewer": "codex-subagent/ci_policy_review",
+  "reviewSource": "separate-agent-review",
+  "reviewReport": "phase-01a-cumulative-promotion-review.md",
+  "reviewReportSha256": "4314ece01d46a7a1820b50d4f9632446b8af91c8d22c8af72ec76efc5189d05f",
+  "reviewedAt": "2026-10-18T08:01:33Z",
+  "verdict": "approve",
+  "findings": []
+}

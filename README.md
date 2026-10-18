@@ -70,7 +70,7 @@ Integration, concurrency, contract, end-to-end, sandbox, security, phase, and de
 personal/defnotwig → PR → dev → PR → staging → PR → main
 ```
 
-Use one implementation pull request per verified phase, Conventional Commit subjects and PR titles ending in their PR number (for example `docs(repo): update workflow (#12)`), current CI, and an independent Codex review record bound to the PR base and diff. GitHub is configured for merge commits only, and `dev`, `staging`, and `main` require PRs, passing `verify` and `review-evidence` checks, and resolved review conversations. Force pushes, branch deletion, and admin bypass are disabled; verify the live repository settings before relying on them. Urgent `fix/*` branches use the same checks and are synchronized downstream. See [CONTRIBUTING.md](CONTRIBUTING.md) for the worktree and promotion workflow.
+Use one implementation pull request per verified phase, Conventional Commit subjects, plain Conventional Commit PR titles (for example `docs(repo): update workflow`), current CI, and an independent Codex review record bound to the PR base and diff. GitHub appends the PR number to merge commit subjects. GitHub is configured for merge commits only, and `dev`, `staging`, and `main` require PRs, passing `verify` and `review-evidence` checks, and resolved review conversations. Force pushes, branch deletion, and admin bypass are disabled; verify the live repository settings before relying on them. Urgent `fix/*` branches use the same checks and are synchronized downstream. See [CONTRIBUTING.md](CONTRIBUTING.md) for the worktree and promotion workflow.
 
 ## Hosted environments
 

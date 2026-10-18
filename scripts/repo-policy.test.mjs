@@ -32,16 +32,21 @@ test("rejects malformed, unknown, and empty commit subjects", () => {
   }
 });
 
-test("requires merge commit titles to preserve the Conventional PR title and PR number", () => {
+test("requires merge commit subjects to use Conventional Commits and end with a PR number", () => {
   assert.equal(isConventionalMergeCommitSubject("docs(repo): bootstrap workflow (#12)"), true);
+  assert.equal(
+    isConventionalMergeCommitSubject("docs(repo): bootstrap workflow (#12) (#12)"),
+    false,
+  );
   assert.equal(isConventionalMergeCommitSubject("docs(repo): bootstrap workflow"), false);
   assert.equal(isConventionalMergeCommitSubject("Merge pull request #12 from owner/branch"), false);
 });
 
-test("requires PR titles to carry their own PR number for the merge commit", () => {
-  assert.equal(isConventionalPullRequestTitle("feat(money): add PHP primitives (#7)", 7), true);
-  assert.equal(isConventionalPullRequestTitle("feat(money): add PHP primitives (#8)", 7), false);
-  assert.equal(isConventionalPullRequestTitle("feat(money): add PHP primitives", 7), false);
+test("requires PR titles to be Conventional Commit subjects without a duplicated PR number", () => {
+  assert.equal(isConventionalPullRequestTitle("feat(money): add PHP primitives"), true);
+  assert.equal(isConventionalPullRequestTitle("feat(money): add PHP primitives (#7)"), false);
+  assert.equal(isConventionalPullRequestTitle("feat(money): add (#7) PHP primitives"), false);
+  assert.equal(isConventionalPullRequestTitle("Add PHP primitives"), false);
 });
 
 test("PR commit-range validation includes existing merge commits", () => {
@@ -56,6 +61,22 @@ test("PR commit-range validation includes existing merge commits", () => {
     isCommitRangeValid([
       { subject: "feat(money): add PHP primitives", parentCount: 1 },
       { subject: "Merge pull request #12 from owner/branch", parentCount: 2 },
+    ]),
+    false,
+  );
+});
+
+test("allows only the preserved Phase 01A merge commit as a duplicate-number legacy exception", () => {
+  const legacySubject = "docs(repo): establish public collaboration and CI policy (#1) (#1)";
+  assert.equal(
+    isCommitRangeValid([
+      { sha: "3c62834af3160c5b1e212e02b2e04b8b316c98a8", subject: legacySubject, parentCount: 2 },
+    ]),
+    true,
+  );
+  assert.equal(
+    isCommitRangeValid([
+      { sha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", subject: legacySubject, parentCount: 2 },
     ]),
     false,
   );
