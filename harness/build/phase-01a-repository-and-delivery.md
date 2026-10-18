@@ -82,6 +82,7 @@ GitHub Actions must pass for each PR head and each promoted branch merge SHA. Co
 - Branches were published from the verified foundation before new bootstrap changes.
 - Repository merge settings allow merge commits only, use the PR title/body for merge commits, and keep squash, rebase, and branch deletion disabled.
 - GitHub protections are active on `dev`, `staging`, and `main`: strict `verify` and `review-evidence` checks, PRs, resolved conversations, enforced administrator rules, no force pushes/deletion, and no linear-history requirement.
+- Both CI jobs use `ubuntu-24.04`, `actions/checkout` v7.0.1, and `actions/setup-node` v7.1.0 at immutable Node 24-compatible SHAs. The `verify` job also uses `pnpm/action-setup` v6.1.0 at its immutable Node 24-compatible SHA; application tooling remains pinned to Node 22.14.0.
 - Initial CI runs for all four branches passed; see the phase build log for run links.
 - PR #1 is open from `personal/defnotwig` to `dev`; its current checked head and merge revision remain pending until final documentation updates and promotion.
 - Provider credentials and hosted environments have not yet been verified.
