@@ -4485,6 +4485,190 @@ var OperationsOverviewService = class {
     }));
     return { keys, webhooks, deliveries };
   }
+  /**
+   * Global multi-entity operational search.
+   * Parameterized against SQL injection, strictly tenant-isolated to merchantId.
+   */
+  async searchOperationalData(merchantId, query) {
+    const q = (query || "").trim();
+    if (!q || q.length < 2) {
+      return {
+        query: q,
+        payments: [],
+        refunds: [],
+        ledger: [],
+        webhooks: [],
+        jobs: [],
+        reconciliation: []
+      };
+    }
+    const wildcard = `%${q}%`;
+    const prefix = `${q}%`;
+    const [paymentsRes, refundsRes, ledgerRes, webhooksRes, jobsRes, reconRes] = await Promise.all([
+      // 1. Payments: matches order number, intent ID, or status
+      this.pool.query(
+        `SELECT
+             p.id,
+             o.order_number,
+             p.amount_minor,
+             p.currency,
+             p.state,
+             p.created_at
+           FROM payrail_private.payment_intents p
+           JOIN payrail_private.orders o ON o.id = p.order_id
+           WHERE p.merchant_id = $1
+             AND (p.id::text ILIKE $2 OR o.order_number ILIKE $2 OR p.state ILIKE $2)
+           ORDER BY
+             CASE WHEN o.order_number ILIKE $3 OR p.id::text ILIKE $3 THEN 0 ELSE 1 END,
+             p.created_at DESC
+           LIMIT 5`,
+        [merchantId, wildcard, prefix]
+      ),
+      // 2. Refunds: matches refund ID, payment ID, or reason
+      this.pool.query(
+        `SELECT
+             id,
+             payment_intent_id,
+             amount_minor,
+             currency,
+             reason,
+             state,
+             created_at
+           FROM payrail_private.refunds
+           WHERE merchant_id = $1
+             AND (id::text ILIKE $2 OR payment_intent_id::text ILIKE $2 OR reason ILIKE $2)
+           ORDER BY created_at DESC
+           LIMIT 5`,
+        [merchantId, wildcard]
+      ),
+      // 3. Ledger: matches entry number, reference ID, or description
+      this.pool.query(
+        `SELECT
+             id,
+             entry_number,
+             reference_type,
+             reference_id,
+             description,
+             posting_state,
+             created_at
+           FROM payrail_private.journal_entries
+           WHERE merchant_id = $1
+             AND (entry_number ILIKE $2 OR reference_id ILIKE $2 OR description ILIKE $2)
+           ORDER BY created_at DESC
+           LIMIT 5`,
+        [merchantId, wildcard]
+      ),
+      // 4. Webhooks / Provider Events: matches event ID or event type
+      this.pool.query(
+        `SELECT
+             id,
+             provider,
+             provider_event_id,
+             event_type,
+             signature_verified,
+             received_at
+           FROM payrail_private.provider_events
+           WHERE provider_event_id ILIKE $1 OR event_type ILIKE $1
+           ORDER BY received_at DESC
+           LIMIT 5`,
+        [wildcard]
+      ),
+      // 5. Durable Jobs & DLQ: matches job ID, job type, or failure reason
+      this.pool.query(
+        `SELECT
+             id,
+             job_type,
+             failure_reason,
+             created_at
+           FROM payrail_private.dead_letter_queue
+           WHERE (merchant_id = $1 OR merchant_id IS NULL)
+             AND (id::text ILIKE $2 OR job_type ILIKE $2 OR failure_reason ILIKE $2)
+           ORDER BY created_at DESC
+           LIMIT 5`,
+        [merchantId, wildcard]
+      ),
+      // 6. Reconciliation Runs: matches run ID or status
+      this.pool.query(
+        `SELECT
+             id,
+             status,
+             total_records,
+             discrepancy_records,
+             created_at
+           FROM payrail_private.reconciliation_runs
+           WHERE merchant_id = $1
+             AND (id::text ILIKE $2 OR status ILIKE $2)
+           ORDER BY created_at DESC
+           LIMIT 5`,
+        [merchantId, wildcard]
+      )
+    ]);
+    const formatPesos = (minor) => {
+      const val = Number.parseInt(minor, 10);
+      if (Number.isNaN(val)) return "0.00";
+      return (val / 100).toLocaleString("en-PH", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    };
+    return {
+      query: q,
+      payments: paymentsRes.rows.map((r) => ({
+        type: "payment",
+        id: r.id,
+        title: r.order_number,
+        subtitle: `PHP ${formatPesos(r.amount_minor)} \xB7 ${r.id.slice(0, 8)}...`,
+        status: r.state,
+        href: `/ops/transactions?search=${encodeURIComponent(r.order_number)}`,
+        timestamp: r.created_at.toISOString()
+      })),
+      refunds: refundsRes.rows.map((r) => ({
+        type: "refund",
+        id: r.id,
+        title: `Refund: ${r.reason || "General Adjustment"}`,
+        subtitle: `PHP ${formatPesos(r.amount_minor)} \xB7 Ref: ${r.id.slice(0, 8)}...`,
+        status: r.state,
+        href: "/ops/refunds",
+        timestamp: r.created_at.toISOString()
+      })),
+      ledger: ledgerRes.rows.map((r) => ({
+        type: "ledger",
+        id: r.id,
+        title: `Journal #${r.entry_number}`,
+        subtitle: `${r.reference_type}: ${r.reference_id} \xB7 ${r.description}`,
+        status: r.posting_state,
+        href: "/ops/ledger",
+        timestamp: r.created_at.toISOString()
+      })),
+      webhooks: webhooksRes.rows.map((r) => ({
+        type: "webhook",
+        id: r.id,
+        title: `Event: ${r.event_type}`,
+        subtitle: `${r.provider} \xB7 ID: ${r.provider_event_id}`,
+        status: r.signature_verified ? "VERIFIED" : "UNVERIFIED",
+        href: "/ops/developer",
+        timestamp: r.received_at.toISOString()
+      })),
+      jobs: jobsRes.rows.map((r) => ({
+        type: "job",
+        id: r.id,
+        title: `DLQ: ${r.job_type}`,
+        subtitle: r.failure_reason ? r.failure_reason.slice(0, 60) : "Failed task",
+        status: "FAILED",
+        href: "/ops/jobs",
+        timestamp: r.created_at.toISOString()
+      })),
+      reconciliation: reconRes.rows.map((r) => ({
+        type: "reconciliation",
+        id: r.id,
+        title: `Reconciliation Run ${r.id.slice(0, 8)}...`,
+        subtitle: `${r.total_records} records \xB7 ${r.discrepancy_records} discrepancies`,
+        status: r.status,
+        href: "/ops/reconciliation",
+        timestamp: r.created_at.toISOString()
+      }))
+    };
+  }
 };
 OperationsOverviewService = __decorateClass([
   Injectable22(),
@@ -4509,6 +4693,11 @@ var OperationsController = class {
       period: sanitizedPeriod
     });
     return { data };
+  }
+  async searchOperationalData(request2, query) {
+    const q = query ? String(query).trim() : "";
+    const results = await this.overviewService.searchOperationalData(request2.user.merchantId, q);
+    return { data: results };
   }
   async getHealth() {
     return { data: await this.overviewService.getSystemHealth() };
@@ -4539,6 +4728,12 @@ __decorateClass([
   __decorateParam(0, Req11()),
   __decorateParam(1, Query9("period"))
 ], OperationsController.prototype, "getOverview", 1);
+__decorateClass([
+  Get11("search"),
+  Permissions("payments:read"),
+  __decorateParam(0, Req11()),
+  __decorateParam(1, Query9("q"))
+], OperationsController.prototype, "searchOperationalData", 1);
 __decorateClass([
   Get11("health"),
   Permissions("payments:read")

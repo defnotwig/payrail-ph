@@ -158,4 +158,146 @@ describe("OperationsOverviewService", () => {
     expect(result.p95LatencyMs).toBeNull();
     expect(result.recentPayments).toHaveLength(0);
   });
+
+  describe("searchOperationalData", () => {
+    it("returns empty structure for empty or short queries without db access", async () => {
+      const mockPool = { query: vi.fn() } as unknown as DatabasePool;
+      const service = new OperationsOverviewService(
+        mockPool,
+        new CircuitBreakerService(),
+        {} as unknown as LedgerService,
+        {} as unknown as ReconciliationService,
+        {} as unknown as DurableJobsService,
+        {} as unknown as MerchantKeysService,
+        {} as unknown as MerchantWebhooksService,
+      );
+
+      const emptyRes = await service.searchOperationalData("merchant_1", "");
+      expect(emptyRes.payments).toHaveLength(0);
+      expect(mockPool.query).not.toHaveBeenCalled();
+
+      const singleCharRes = await service.searchOperationalData("merchant_1", "p");
+      expect(singleCharRes.payments).toHaveLength(0);
+      expect(mockPool.query).not.toHaveBeenCalled();
+    });
+
+    it("executes parallel parameterized queries and maps results correctly", async () => {
+      const mockPool = {
+        query: vi
+          .fn()
+          // 1. payments
+          .mockResolvedValueOnce({
+            rows: [
+              {
+                id: "pi_12345678",
+                order_number: "PRL-20261019-001",
+                amount_minor: "100",
+                currency: "PHP",
+                state: "SUCCEEDED",
+                created_at: new Date("2026-10-19T10:00:00Z"),
+              },
+            ],
+          })
+          // 2. refunds
+          .mockResolvedValueOnce({
+            rows: [
+              {
+                id: "ref_98765432",
+                payment_intent_id: "pi_12345678",
+                amount_minor: "100",
+                currency: "PHP",
+                reason: "Customer requested",
+                state: "SUCCEEDED",
+                created_at: new Date("2026-10-19T11:00:00Z"),
+              },
+            ],
+          })
+          // 3. ledger
+          .mockResolvedValueOnce({
+            rows: [
+              {
+                id: "jrn_1",
+                entry_number: "JE-1001",
+                reference_type: "PAYMENT",
+                reference_id: "pi_12345678",
+                description: "Payment settlement",
+                posting_state: "POSTED",
+                created_at: new Date("2026-10-19T10:01:00Z"),
+              },
+            ],
+          })
+          // 4. webhooks
+          .mockResolvedValueOnce({
+            rows: [
+              {
+                id: "evt_row_1",
+                provider: "paymongo",
+                provider_event_id: "evt_12345",
+                event_type: "payment.paid",
+                signature_verified: true,
+                received_at: new Date("2026-10-19T10:00:30Z"),
+              },
+            ],
+          })
+          // 5. jobs
+          .mockResolvedValueOnce({
+            rows: [
+              {
+                id: "dlq_1",
+                job_type: "SEND_WEBHOOK",
+                failure_reason: "Connection timeout",
+                created_at: new Date("2026-10-19T10:05:00Z"),
+              },
+            ],
+          })
+          // 6. reconciliation
+          .mockResolvedValueOnce({
+            rows: [
+              {
+                id: "rec_1",
+                status: "COMPLETED",
+                total_records: 10,
+                discrepancy_records: 0,
+                created_at: new Date("2026-10-19T12:00:00Z"),
+              },
+            ],
+          }),
+      } as unknown as DatabasePool;
+
+      const service = new OperationsOverviewService(
+        mockPool,
+        new CircuitBreakerService(),
+        {} as unknown as LedgerService,
+        {} as unknown as ReconciliationService,
+        {} as unknown as DurableJobsService,
+        {} as unknown as MerchantKeysService,
+        {} as unknown as MerchantWebhooksService,
+      );
+
+      const res = await service.searchOperationalData("merchant_1", "PRL");
+
+      expect(mockPool.query).toHaveBeenCalledTimes(6);
+      expect(res.payments).toHaveLength(1);
+      expect(res.payments[0]?.title).toBe("PRL-20261019-001");
+      expect(res.payments[0]?.subtitle).toContain("PHP 1.00");
+      expect(res.payments[0]?.status).toBe("SUCCEEDED");
+      expect(res.payments[0]?.href).toBe("/ops/transactions?search=PRL-20261019-001");
+
+      expect(res.refunds).toHaveLength(1);
+      expect(res.refunds[0]?.title).toBe("Refund: Customer requested");
+
+      expect(res.ledger).toHaveLength(1);
+      expect(res.ledger[0]?.title).toBe("Journal #JE-1001");
+
+      expect(res.webhooks).toHaveLength(1);
+      expect(res.webhooks[0]?.title).toBe("Event: payment.paid");
+      expect(res.webhooks[0]?.status).toBe("VERIFIED");
+
+      expect(res.jobs).toHaveLength(1);
+      expect(res.jobs[0]?.title).toBe("DLQ: SEND_WEBHOOK");
+
+      expect(res.reconciliation).toHaveLength(1);
+      expect(res.reconciliation[0]?.status).toBe("COMPLETED");
+    });
+  });
 });

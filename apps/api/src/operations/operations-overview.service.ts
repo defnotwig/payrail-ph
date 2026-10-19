@@ -60,6 +60,26 @@ export interface OperationsOverviewResult {
   providerHealth: ProviderHealthReport;
 }
 
+export interface SearchResultItem {
+  type: "page" | "payment" | "refund" | "ledger" | "webhook" | "job" | "reconciliation";
+  id: string;
+  title: string;
+  subtitle?: string;
+  status?: string;
+  href: string;
+  timestamp?: string;
+}
+
+export interface SearchResultsGrouped {
+  query: string;
+  payments: SearchResultItem[];
+  refunds: SearchResultItem[];
+  ledger: SearchResultItem[];
+  webhooks: SearchResultItem[];
+  jobs: SearchResultItem[];
+  reconciliation: SearchResultItem[];
+}
+
 @Injectable()
 export class OperationsOverviewService {
   constructor(
@@ -445,5 +465,240 @@ export class OperationsOverviewService {
       createdAt: r.created_at.toISOString(),
     }));
     return { keys, webhooks, deliveries };
+  }
+
+  /**
+   * Global multi-entity operational search.
+   * Parameterized against SQL injection, strictly tenant-isolated to merchantId.
+   */
+  async searchOperationalData(merchantId: string, query: string): Promise<SearchResultsGrouped> {
+    const q = (query || "").trim();
+    if (!q || q.length < 2) {
+      return {
+        query: q,
+        payments: [],
+        refunds: [],
+        ledger: [],
+        webhooks: [],
+        jobs: [],
+        reconciliation: [],
+      };
+    }
+
+    const wildcard = `%${q}%`;
+    const prefix = `${q}%`;
+
+    const [paymentsRes, refundsRes, ledgerRes, webhooksRes, jobsRes, reconRes] = await Promise.all([
+      // 1. Payments: matches order number, intent ID, or status
+      this.pool.query<{
+        id: string;
+        order_number: string;
+        amount_minor: string;
+        currency: string;
+        state: string;
+        created_at: Date;
+      }>(
+        `SELECT
+             p.id,
+             o.order_number,
+             p.amount_minor,
+             p.currency,
+             p.state,
+             p.created_at
+           FROM payrail_private.payment_intents p
+           JOIN payrail_private.orders o ON o.id = p.order_id
+           WHERE p.merchant_id = $1
+             AND (p.id::text ILIKE $2 OR o.order_number ILIKE $2 OR p.state ILIKE $2)
+           ORDER BY
+             CASE WHEN o.order_number ILIKE $3 OR p.id::text ILIKE $3 THEN 0 ELSE 1 END,
+             p.created_at DESC
+           LIMIT 5`,
+        [merchantId, wildcard, prefix],
+      ),
+
+      // 2. Refunds: matches refund ID, payment ID, or reason
+      this.pool.query<{
+        id: string;
+        payment_intent_id: string;
+        amount_minor: string;
+        currency: string;
+        reason: string;
+        state: string;
+        created_at: Date;
+      }>(
+        `SELECT
+             id,
+             payment_intent_id,
+             amount_minor,
+             currency,
+             reason,
+             state,
+             created_at
+           FROM payrail_private.refunds
+           WHERE merchant_id = $1
+             AND (id::text ILIKE $2 OR payment_intent_id::text ILIKE $2 OR reason ILIKE $2)
+           ORDER BY created_at DESC
+           LIMIT 5`,
+        [merchantId, wildcard],
+      ),
+
+      // 3. Ledger: matches entry number, reference ID, or description
+      this.pool.query<{
+        id: string;
+        entry_number: string;
+        reference_type: string;
+        reference_id: string;
+        description: string;
+        posting_state: string;
+        created_at: Date;
+      }>(
+        `SELECT
+             id,
+             entry_number,
+             reference_type,
+             reference_id,
+             description,
+             posting_state,
+             created_at
+           FROM payrail_private.journal_entries
+           WHERE merchant_id = $1
+             AND (entry_number ILIKE $2 OR reference_id ILIKE $2 OR description ILIKE $2)
+           ORDER BY created_at DESC
+           LIMIT 5`,
+        [merchantId, wildcard],
+      ),
+
+      // 4. Webhooks / Provider Events: matches event ID or event type
+      this.pool.query<{
+        id: string;
+        provider: string;
+        provider_event_id: string;
+        event_type: string;
+        signature_verified: boolean;
+        received_at: Date;
+      }>(
+        `SELECT
+             id,
+             provider,
+             provider_event_id,
+             event_type,
+             signature_verified,
+             received_at
+           FROM payrail_private.provider_events
+           WHERE provider_event_id ILIKE $1 OR event_type ILIKE $1
+           ORDER BY received_at DESC
+           LIMIT 5`,
+        [wildcard],
+      ),
+
+      // 5. Durable Jobs & DLQ: matches job ID, job type, or failure reason
+      this.pool.query<{
+        id: string;
+        job_type: string;
+        failure_reason: string;
+        created_at: Date;
+      }>(
+        `SELECT
+             id,
+             job_type,
+             failure_reason,
+             created_at
+           FROM payrail_private.dead_letter_queue
+           WHERE (merchant_id = $1 OR merchant_id IS NULL)
+             AND (id::text ILIKE $2 OR job_type ILIKE $2 OR failure_reason ILIKE $2)
+           ORDER BY created_at DESC
+           LIMIT 5`,
+        [merchantId, wildcard],
+      ),
+
+      // 6. Reconciliation Runs: matches run ID or status
+      this.pool.query<{
+        id: string;
+        status: string;
+        total_records: number;
+        discrepancy_records: number;
+        created_at: Date;
+      }>(
+        `SELECT
+             id,
+             status,
+             total_records,
+             discrepancy_records,
+             created_at
+           FROM payrail_private.reconciliation_runs
+           WHERE merchant_id = $1
+             AND (id::text ILIKE $2 OR status ILIKE $2)
+           ORDER BY created_at DESC
+           LIMIT 5`,
+        [merchantId, wildcard],
+      ),
+    ]);
+
+    const formatPesos = (minor: string) => {
+      const val = Number.parseInt(minor, 10);
+      if (Number.isNaN(val)) return "0.00";
+      return (val / 100).toLocaleString("en-PH", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+    };
+
+    return {
+      query: q,
+      payments: paymentsRes.rows.map((r) => ({
+        type: "payment",
+        id: r.id,
+        title: r.order_number,
+        subtitle: `PHP ${formatPesos(r.amount_minor)} · ${r.id.slice(0, 8)}...`,
+        status: r.state,
+        href: `/ops/transactions?search=${encodeURIComponent(r.order_number)}`,
+        timestamp: r.created_at.toISOString(),
+      })),
+      refunds: refundsRes.rows.map((r) => ({
+        type: "refund",
+        id: r.id,
+        title: `Refund: ${r.reason || "General Adjustment"}`,
+        subtitle: `PHP ${formatPesos(r.amount_minor)} · Ref: ${r.id.slice(0, 8)}...`,
+        status: r.state,
+        href: "/ops/refunds",
+        timestamp: r.created_at.toISOString(),
+      })),
+      ledger: ledgerRes.rows.map((r) => ({
+        type: "ledger",
+        id: r.id,
+        title: `Journal #${r.entry_number}`,
+        subtitle: `${r.reference_type}: ${r.reference_id} · ${r.description}`,
+        status: r.posting_state,
+        href: "/ops/ledger",
+        timestamp: r.created_at.toISOString(),
+      })),
+      webhooks: webhooksRes.rows.map((r) => ({
+        type: "webhook",
+        id: r.id,
+        title: `Event: ${r.event_type}`,
+        subtitle: `${r.provider} · ID: ${r.provider_event_id}`,
+        status: r.signature_verified ? "VERIFIED" : "UNVERIFIED",
+        href: "/ops/developer",
+        timestamp: r.received_at.toISOString(),
+      })),
+      jobs: jobsRes.rows.map((r) => ({
+        type: "job",
+        id: r.id,
+        title: `DLQ: ${r.job_type}`,
+        subtitle: r.failure_reason ? r.failure_reason.slice(0, 60) : "Failed task",
+        status: "FAILED",
+        href: "/ops/jobs",
+        timestamp: r.created_at.toISOString(),
+      })),
+      reconciliation: reconRes.rows.map((r) => ({
+        type: "reconciliation",
+        id: r.id,
+        title: `Reconciliation Run ${r.id.slice(0, 8)}...`,
+        subtitle: `${r.total_records} records · ${r.discrepancy_records} discrepancies`,
+        status: r.status,
+        href: "/ops/reconciliation",
+        timestamp: r.created_at.toISOString(),
+      })),
+    };
   }
 }

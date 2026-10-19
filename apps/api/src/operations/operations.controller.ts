@@ -27,6 +27,14 @@ export class OperationsController {
     return { data };
   }
 
+  @Get("search")
+  @Permissions("payments:read")
+  async searchOperationalData(@Req() request: OperatorRequest, @Query("q") query?: string) {
+    const q = query ? String(query).trim() : "";
+    const results = await this.overviewService.searchOperationalData(request.user.merchantId, q);
+    return { data: results };
+  }
+
   @Get("health")
   @Permissions("payments:read")
   async getHealth() {
