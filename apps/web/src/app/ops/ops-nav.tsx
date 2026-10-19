@@ -11,16 +11,16 @@ interface NavItem {
 }
 
 const navigation: NavItem[] = [
-  { name: "Overview", href: "/ops", exact: true },
-  { name: "Transactions & Intents", href: "/ops/transactions" },
-  { name: "Double-Entry Ledger", href: "/ops/ledger" },
+  { name: "Home", href: "/ops", exact: true },
+  { name: "Payments", href: "/ops/transactions" },
+  { name: "Ledger", href: "/ops/ledger" },
   { name: "Refunds", href: "/ops/refunds" },
   { name: "Reconciliation", href: "/ops/reconciliation" },
-  { name: "Durable Jobs & DLQ", href: "/ops/jobs" },
-  { name: "Merchant API & Webhooks", href: "/ops/developer" },
+  { name: "Webhooks & API", href: "/ops/developer" },
+  { name: "Jobs & DLQ", href: "/ops/jobs" },
+  { name: "Reliability Lab", href: "/ops/reliability-lab" },
   { name: "Cards & 3DS", href: "/ops/cards" },
-  { name: "Reliability Lab (Chaos)", href: "/ops/reliability-lab" },
-  { name: "ISO 8583 Protocol Lab", href: "/ops/iso8583" },
+  { name: "ISO 8583 Lab", href: "/ops/iso8583" },
 ];
 
 export function OpsNav() {
