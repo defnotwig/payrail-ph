@@ -20,5 +20,11 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   if (!cachedHandler) {
     cachedHandler = await bootstrap();
   }
+  const matchedPath = (req.headers["x-matched-path"] || req.headers["x-invoke-path"]) as
+    | string
+    | undefined;
+  if (matchedPath && req.url === "/api") {
+    req.url = matchedPath;
+  }
   return cachedHandler?.(req, res);
 }

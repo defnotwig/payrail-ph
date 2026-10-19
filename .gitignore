@@ -16,3 +16,6 @@ playwright-report/
 test-results/
 /harness/design-qa/payrail-desktop-latest.png
 .worktrees/
+
+.vercel
+.env*

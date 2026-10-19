@@ -22,7 +22,7 @@ const environmentSchema = z.object({
   PAYMONGO_WEBHOOK_SECRET: z
     .string()
     .min(8)
-    .regex(/^whsk_test_/),
+    .regex(/^whsk_/),
   PAYMENTS_MODE: z.enum(["test"]).default("test"),
 });
 
