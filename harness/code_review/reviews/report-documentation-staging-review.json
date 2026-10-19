@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 2,
+  "reviewedBaseSha": "551ff9c0dee541c693b15e735d3261f954d9d668",
+  "reviewedDiffSha256": "ce32e0b28b01c78d46916c6d51884aaff5e735d3ad67498c8cf192e8e8366d8c",
+  "reviewer": "codex-subagent/independent-review",
+  "reviewSource": "separate-agent-review",
+  "reviewReport": "report-documentation-staging-review.md",
+  "reviewReportSha256": "d70b948200f5e314ba8e3f453098821d18e25f399b4eab85ff16ce60162f4450",
+  "reviewedAt": "2026-10-19T01:34:04.616Z",
+  "verdict": "approve",
+  "findings": []
+}
