@@ -69,8 +69,10 @@ export default function OpsOverviewPage() {
       if (!res.ok) {
         throw new Error(`Overview service responded with HTTP ${res.status}`);
       }
-      const json: OperationsOverviewResult = await res.json();
-      setData(json);
+      const json = await res.json();
+      const payload: OperationsOverviewResult =
+        json && typeof json === "object" && "data" in json && json.data ? json.data : json;
+      setData(payload);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load operations metrics");
     } finally {
@@ -251,7 +253,7 @@ export default function OpsOverviewPage() {
             <MetricCard
               label="Payment Success Rate"
               value={
-                data && data.successRate !== null ? (
+                data && typeof data.successRate === "number" ? (
                   <span style={{ color: data.successRate >= 99 ? "#166534" : "#b45309" }}>
                     {data.successRate.toFixed(1)}%
                   </span>
@@ -260,17 +262,23 @@ export default function OpsOverviewPage() {
                 )
               }
               metadata={
-                data && data.totalPayments > 0
-                  ? `${data.successfulPayments} of ${data.totalPayments} succeeded`
+                data && typeof data.totalPayments === "number" && data.totalPayments > 0
+                  ? `${data.successfulPayments ?? 0} of ${data.totalPayments} succeeded`
                   : "0 payments in this window"
               }
             />
 
             <MetricCard
               label="Gross Volume"
-              value={data ? <Amount amountMinor={data.grossVolumeMinor} currency="PHP" /> : "₱0.00"}
+              value={
+                data?.grossVolumeMinor ? (
+                  <Amount amountMinor={data.grossVolumeMinor} currency="PHP" />
+                ) : (
+                  "₱0.00"
+                )
+              }
               metadata={
-                data
+                data && typeof data.totalPayments === "number"
                   ? `${data.totalPayments} total transaction${data.totalPayments === 1 ? "" : "s"}`
                   : "Authoritative ledger volume"
               }
@@ -278,14 +286,18 @@ export default function OpsOverviewPage() {
 
             <MetricCard
               label="Total Transactions"
-              value={data ? data.totalPayments.toLocaleString() : "0"}
+              value={
+                data && typeof data.totalPayments === "number"
+                  ? data.totalPayments.toLocaleString()
+                  : "0"
+              }
               metadata="QR Ph & Card orchestration"
             />
 
             <MetricCard
               label="P95 Confirmation Latency"
               value={
-                data && data.p95LatencyMs !== null ? (
+                data && typeof data.p95LatencyMs === "number" ? (
                   `${data.p95LatencyMs}ms`
                 ) : (
                   <span style={{ color: "#64748b" }}>—</span>
@@ -393,10 +405,15 @@ export default function OpsOverviewPage() {
               24h Gateway Attempts
             </span>
             <div style={{ fontSize: "16px", fontWeight: 700, color: "#0f172a", marginTop: "4px" }}>
-              {data?.providerHealth ? data.providerHealth.totalAttempts24h : "—"}
+              {data?.providerHealth && typeof data.providerHealth.totalAttempts24h === "number"
+                ? data.providerHealth.totalAttempts24h.toLocaleString()
+                : "—"}
             </div>
             <span style={{ fontSize: "12px", color: "#475569" }}>
-              Failures: {data?.providerHealth ? data.providerHealth.failedAttempts24h : "—"}
+              Failures:{" "}
+              {data?.providerHealth && typeof data.providerHealth.failedAttempts24h === "number"
+                ? data.providerHealth.failedAttempts24h.toLocaleString()
+                : "—"}
             </span>
           </div>
 
@@ -420,7 +437,9 @@ export default function OpsOverviewPage() {
               Failure Rate
             </span>
             <div style={{ fontSize: "16px", fontWeight: 700, color: "#0f172a", marginTop: "4px" }}>
-              {data?.providerHealth ? `${data.providerHealth.failureRate.toFixed(1)}%` : "—"}
+              {data?.providerHealth && typeof data.providerHealth.failureRate === "number"
+                ? `${data.providerHealth.failureRate.toFixed(1)}%`
+                : "—"}
             </div>
             <span style={{ fontSize: "12px", color: "#475569" }}>Threshold: 50% trip limit</span>
           </div>
@@ -445,7 +464,9 @@ export default function OpsOverviewPage() {
               Provider P95 Latency
             </span>
             <div style={{ fontSize: "16px", fontWeight: 700, color: "#0f172a", marginTop: "4px" }}>
-              {data?.providerHealth?.p95LatencyMs ? `${data.providerHealth.p95LatencyMs}ms` : "—"}
+              {data?.providerHealth && typeof data.providerHealth.p95LatencyMs === "number"
+                ? `${data.providerHealth.p95LatencyMs}ms`
+                : "—"}
             </div>
             <span style={{ fontSize: "12px", color: "#475569" }}>Upstream API round-trip</span>
           </div>
