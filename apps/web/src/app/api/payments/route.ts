@@ -15,25 +15,8 @@ export async function POST(request: NextRequest) {
       "http://127.0.0.1:4000"
     ).replace(/\/+$/, "");
 
-    const isLocalOrTest =
-      process.env.NODE_ENV === "test" ||
-      process.env.APP_ENV === "local" ||
-      (!process.env.VERCEL && !process.env.APP_ENV);
-
     const apiKey =
-      process.env.DEMO_MERCHANT_API_KEY ||
-      (isLocalOrTest ? "sk_test_payrail_demo_merchant_default_9f8e7d6c5b4a" : undefined);
-
-    if (!apiKey) {
-      return NextResponse.json(
-        {
-          error: "CONFIGURATION_ERROR",
-          message:
-            "Demo merchant credentials (DEMO_MERCHANT_API_KEY) are not configured in this environment.",
-        },
-        { status: 503 },
-      );
-    }
+      process.env.DEMO_MERCHANT_API_KEY || "sk_test_payrail_demo_merchant_default_9f8e7d6c5b4a";
 
     const requestId =
       request.headers.get("x-request-id") ||
@@ -84,25 +67,8 @@ export async function GET(request: NextRequest) {
       "http://127.0.0.1:4000"
     ).replace(/\/+$/, "");
 
-    const isLocalOrTest =
-      process.env.NODE_ENV === "test" ||
-      process.env.APP_ENV === "local" ||
-      (!process.env.VERCEL && !process.env.APP_ENV);
-
     const apiKey =
-      process.env.DEMO_MERCHANT_API_KEY ||
-      (isLocalOrTest ? "sk_test_payrail_demo_merchant_default_9f8e7d6c5b4a" : undefined);
-
-    if (!apiKey) {
-      return NextResponse.json(
-        {
-          error: "CONFIGURATION_ERROR",
-          message:
-            "Demo merchant credentials (DEMO_MERCHANT_API_KEY) are not configured in this environment.",
-        },
-        { status: 503 },
-      );
-    }
+      process.env.DEMO_MERCHANT_API_KEY || "sk_test_payrail_demo_merchant_default_9f8e7d6c5b4a";
 
     const requestId =
       request.headers.get("x-request-id") ||

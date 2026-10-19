@@ -129,52 +129,18 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
             return;
           }
         }
-      } catch {
-        // Fall back to session storage
-      }
-
-      // Check session storage
-      try {
-        const raw = sessionStorage.getItem("payrail_demo_payment");
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed.id === id && isMounted) {
-            setData(synthesizeInvestigation(parsed));
-            setLoading(false);
-            return;
-          }
+      } catch (err) {
+        if (isMounted) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Failed to communicate with payment investigation service",
+          );
         }
-        const recordedRaw = sessionStorage.getItem("payrail_recorded_transactions");
-        if (recordedRaw) {
-          const list: PaymentDetail[] = JSON.parse(recordedRaw);
-          const found = list.find((item) => item.id === id);
-          if (found && isMounted) {
-            setData(synthesizeInvestigation(found));
-            setLoading(false);
-            return;
-          }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
         }
-      } catch {
-        // session storage unavailable
-      }
-
-      // Fallback synthetic transaction
-      if (isMounted) {
-        setData(
-          synthesizeInvestigation({
-            id,
-            merchantId: "merchant_default",
-            orderNumber: `ORD-${id.substring(0, 8)}`,
-            amountMinor: "100",
-            currency: "PHP",
-            state: "SUCCEEDED",
-            provider: "paymongo",
-            paymentMethod: "qrph",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          }),
-        );
-        setLoading(false);
       }
     }
 

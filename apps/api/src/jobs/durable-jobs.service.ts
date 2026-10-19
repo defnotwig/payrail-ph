@@ -276,6 +276,50 @@ export class DurableJobsService {
   }
 
   /**
+   * Retrieves active durable jobs for operations inspection.
+   */
+  async getActiveJobs(limit = 50): Promise<DurableJobRecord[]> {
+    const res = await this.pool.query<{
+      id: string;
+      job_type: string;
+      payload: Record<string, unknown>;
+      state: JobState;
+      attempt_count: number;
+      max_attempts: number;
+      next_attempt_at: Date;
+      locked_by: string | null;
+      claim_token: string | null;
+      locked_until: Date | null;
+      last_error: string | null;
+      error_code: string | null;
+      created_at: Date;
+      updated_at: Date;
+    }>(
+      `SELECT * FROM payrail_private.durable_jobs
+       ORDER BY created_at DESC
+       LIMIT $1`,
+      [limit],
+    );
+
+    return res.rows.map((r) => ({
+      id: r.id,
+      jobType: r.job_type,
+      payload: r.payload,
+      state: r.state,
+      attemptCount: r.attempt_count,
+      maxAttempts: r.max_attempts,
+      nextAttemptAt: r.next_attempt_at.toISOString(),
+      lockedBy: r.locked_by || undefined,
+      claimToken: r.claim_token || undefined,
+      lockedUntil: r.locked_until?.toISOString(),
+      lastError: r.last_error || undefined,
+      errorCode: r.error_code || undefined,
+      createdAt: r.created_at.toISOString(),
+      updatedAt: r.updated_at.toISOString(),
+    }));
+  }
+
+  /**
    * Replays an existing dead-letter item by re-queuing a new clean durable job.
    */
   async replayDeadLetter(dlqId: string, replayedBy: string): Promise<string> {

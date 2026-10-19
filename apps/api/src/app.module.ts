@@ -14,6 +14,7 @@ import { ReconciliationModule } from "./reconciliation/reconciliation.module";
 import { AuditModule } from "./audit/audit.module";
 import { Iso8583Module } from "./iso8583/iso8583.module";
 import { FeePolicyModule } from "./fees/fee-policy.module";
+import { OperationsModule } from "./operations/operations.module";
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { FeePolicyModule } from "./fees/fee-policy.module";
     AuditModule,
     Iso8583Module,
     FeePolicyModule,
+    OperationsModule,
   ],
 })
 export class AppModule {}
