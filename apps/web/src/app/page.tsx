@@ -54,12 +54,11 @@ export default function Home() {
 
       <section className="hero page-gutter" aria-labelledby="hero-title">
         <div className="hero-copy">
-          <p className="hero-label hero-label-sandbox">SANDBOX ONLY</p>
-          <p className="hero-label hero-label-provider">PAYMONGO TEST MODE</p>
-          <h1 id="hero-title">Payments you can inspect end to end.</h1>
+          <p className="hero-label hero-label-sandbox">TEST ENVIRONMENT · NO REAL FUNDS</p>
+          <h1 id="hero-title">Reliable payment orchestration, from checkout to reconciliation.</h1>
           <p className="hero-intro">
-            A sandbox payment orchestration platform built around QR Ph, idempotency, webhooks and
-            financial consistency.
+            A sandbox platform demonstrating payment processing, signed webhooks, idempotent
+            financial effects, balanced ledgering, and operational visibility.
           </p>
           <div
             style={{
@@ -67,28 +66,36 @@ export default function Home() {
               gap: "12px",
               alignItems: "center",
               flexWrap: "wrap",
-              marginTop: "16px",
+              marginTop: "20px",
             }}
           >
             <Link className="primary-link" href="/demo/qrph">
-              Try QR Ph <span aria-hidden="true">→</span>
+              Try QR Ph demo <span aria-hidden="true">→</span>
             </Link>
             <Link
-              href="/ops/transactions"
+              href="/ops"
               style={{
                 fontSize: "14px",
                 fontWeight: 600,
                 color: "var(--color-cobalt, #0f52ba)",
-                textDecoration: "underline",
+                padding: "10px 18px",
+                borderRadius: "6px",
+                border: "1px solid #cbd5e1",
+                textDecoration: "none",
+                background: "#ffffff",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
               }}
             >
-              Explore payments <span aria-hidden="true">↗</span>
+              Explore operations <span aria-hidden="true">↗</span>
             </Link>
           </div>
           <p className="evidence-note" id="reliability" role="status">
             <span className="status-dot" aria-hidden="true" />
             <span>
-              PayMongo Test Mode · Signed Webhooks · Double-Entry Ledger · PostgreSQL · Sandbox Only
+              PayMongo Test Mode · Signed Webhooks · Balanced Double-Entry Ledger · Hosted
+              PostgreSQL
             </span>
           </p>
         </div>

@@ -889,8 +889,8 @@ export function QrPhPaymentFlow() {
                     lineHeight: 1.4,
                   }}
                 >
-                  <strong>TEST MODE:</strong> Do not scan or pay with real banking apps (GCash,
-                  Maya, bank apps). Use the official PayMongo simulator button below.
+                  <strong>Test payment:</strong> Use the PayMongo simulator below. Do not scan this
+                  QR with a real banking or e-wallet app.
                 </div>
 
                 {/* Primary Simulator Action Button */}
@@ -915,7 +915,7 @@ export function QrPhPaymentFlow() {
                         transition: "background 120ms ease",
                       }}
                     >
-                      Simulate ₱1 payment ↗
+                      Open PayMongo simulator ↗
                     </a>
                   </div>
                 )}
