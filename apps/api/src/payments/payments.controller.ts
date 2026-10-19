@@ -56,4 +56,14 @@ export class PaymentsController {
   getPayment(@Param("id") id: string, @Req() request: OperatorRequest) {
     return this.payments.getPaymentIntent(parseInput(identifier, id), request.user.merchantId);
   }
+  @Get(":id/investigation")
+  @Permissions("payments:read")
+  async getInvestigation(@Param("id") id: string, @Req() request: OperatorRequest) {
+    return {
+      data: await this.payments.getPaymentInvestigation(
+        parseInput(identifier, id),
+        request.user.merchantId,
+      ),
+    };
+  }
 }
