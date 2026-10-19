@@ -23,6 +23,7 @@ describe("PayRail PH QR Ph Local End-to-End Payment Flow", () => {
     process.env.PAYMONGO_SECRET_KEY = "sk_test_placeholder";
     process.env.PAYMONGO_WEBHOOK_SECRET = "whsk_test_placeholder";
     process.env.PAYMENTS_MODE = "test";
+    process.env.PAYMENTS_ADAPTER_MODE = "fixture";
 
     pool = new DatabasePool();
     try {

@@ -62,6 +62,14 @@ export class WebhooksService {
     } catch {
       // In test fixtures or isolated unit tests, allow fallback to test placeholders
     }
+    if (
+      (process.env.APP_ENV === "staging" || process.env.APP_ENV === "production") &&
+      webhookSecret === "whsk_test_placeholder"
+    ) {
+      throw new Error(
+        "Insecure default PAYMONGO_WEBHOOK_SECRET placeholder is prohibited in staging and production environments.",
+      );
+    }
     this.webhookSecret = webhookSecret;
     this.environment = environment;
     this.adapterAccount =

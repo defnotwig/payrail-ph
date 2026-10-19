@@ -20,15 +20,38 @@ export function configureApplication(app: INestApplication): void {
       next();
     },
   );
+  const allowedOrigins = new Set([
+    environment.WEB_ORIGIN,
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+  ]);
   app.enableCors({
-    origin: environment.WEB_ORIGIN,
+    origin: (
+      requestOrigin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
+      if (!requestOrigin) {
+        callback(null, true);
+        return;
+      }
+      if (
+        allowedOrigins.has(requestOrigin) ||
+        /^https:\/\/payrail-ph-web(-[a-z0-9_-]+)?\.vercel\.app$/.test(requestOrigin)
+      ) {
+        callback(null, true);
+        return;
+      }
+      callback(null, false);
+    },
     methods: ["GET", "POST", "DELETE", "OPTIONS"],
     allowedHeaders: [
       "Content-Type",
       "Idempotency-Key",
+      "idempotency-key",
       "Authorization",
       "X-Merchant-Id",
       "X-API-Key",
+      "paymongo-signature",
     ],
     credentials: false,
   });
