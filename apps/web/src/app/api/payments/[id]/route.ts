@@ -17,21 +17,30 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
     const apiKey =
       process.env.DEMO_MERCHANT_API_KEY || "sk_test_payrail_demo_merchant_default_9f8e7d6c5b4a";
 
+    const requestId =
+      _request.headers.get("x-request-id") ||
+      _request.headers.get("x-correlation-id") ||
+      crypto.randomUUID();
+
     const response = await fetch(`${apiBase}/payments/${encodeURIComponent(id)}`, {
       method: "GET",
       headers: {
         Accept: "application/json",
         "X-API-Key": apiKey,
+        "X-Request-Id": requestId,
+        "X-Correlation-Id": requestId,
       },
     });
 
     const data = await response.json().catch(() => ({}));
 
-    if (!response.ok) {
-      return NextResponse.json(data, { status: response.status });
-    }
-
-    return NextResponse.json(data, { status: response.status });
+    return NextResponse.json(data, {
+      status: response.status,
+      headers: {
+        "x-request-id": requestId,
+        "x-correlation-id": requestId,
+      },
+    });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to communicate with payment service";
