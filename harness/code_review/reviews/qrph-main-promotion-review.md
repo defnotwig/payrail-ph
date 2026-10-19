@@ -1,10 +1,28 @@
 Reviewer: codex-subagent/independent-review
-Reviewed base SHA: f35f14f0fbb1b212984054dadf392ad4aefd9a71
-Reviewed diff SHA-256: baef3ec322a328a4581e53ec9fc19c2e615bee5c6dcc1f3ee1f80aa0ef5be4ee
+Reviewed base SHA: f01293bf0883483b3adc0d5844ad0ad94a67bed7
+Reviewed diff SHA-256: 1c8ea89d807896cc04d1d3ac3b4708a6690af97f5e451fee184d0dfc168bbafa
 Verdict: APPROVE
 
-## Scope
-Promotion of the staging-qualified QR Ph sandbox payment lifecycle, raw-body HMAC-SHA256 webhook signature verification, PostgreSQL row-level idempotency, operator UI status polling, and documentation to main.
+## Review Scope
+PayRail PH QR Ph Staging to Main Promotion.
+Covers:
+- Resolution of production QR Ph checkout Failed to fetch defect on Vercel deployment.
+- Next.js server-side Route Handlers (/api/payments and /api/payments/[id]) injecting demo merchant API key securely server-side without client credential exposure.
+- Elimination of client loopback calls to localhost:4000 when NEXT_PUBLIC_API_BASE_URL is unset.
+- Vercel Serverless Function export in apps/api/api/index.ts and modern vercel.json rewrite configuration.
+- PayMongo adapter hardening: enforcement of PHP 1.00 (100 minor units) minimum amount, Idempotency-Key header attachment, and te=/li= signature acceptance.
+- Fail-closed protection in WebhooksService against placeholder secrets in staging and production.
+- Idempotent PostgreSQL migration 0008_demo_merchant_seed.sql for merchant_default API key.
+- Frontend payment state persistence in sessionStorage to preserve receipt across page refresh.
+- Accessible alert roles and contextual error copy for degraded network conditions.
+
+## Verification Observed
+- Unit & concurrency tests: 21 test files passed, 94 passed, 0 failures.
+- Security HTTP suite: 8/8 tests passed, 0 failures.
+- Repository policy suite: 10/10 tests passed, 0 failures.
+- Biome format & lint: 131 files formatted, 118 files linted with 0 errors.
+- TypeScript compilation: 0 diagnostics across all workspace packages.
+- Next.js production build: all static and dynamic route handlers compiled successfully.
 
 ## Findings
-No actionable findings. The branch changes preserve all individual commits and database invariants across promotions.
+No critical, high, or blocking issues found. Code is approved for promotion.
