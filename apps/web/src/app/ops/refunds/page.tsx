@@ -1,54 +1,110 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Amount, Dialog, PageHeader, StatusBadge } from "../../../components/ui";
 import styles from "../ops.module.css";
 
 interface RefundRecord {
   id: string;
   paymentIntentId: string;
-  amountMinor: number;
+  amountMinor: string;
+  currency: string;
   reason: string;
-  status: "SUCCEEDED" | "PENDING" | "FAILED";
-  compensatingJournalId: string;
+  state: "SUCCEEDED" | "PENDING" | "FAILED" | "UNKNOWN";
   createdAt: string;
 }
 
+interface PaymentOption {
+  id: string;
+  orderNumber: string;
+  amountMinor: string;
+  currency: string;
+  state: string;
+}
+
 export default function RefundsPage() {
-  const [targetIntent, setTargetIntent] = useState("pi_test_0192a831001");
-  const [totalCapacity, _setTotalCapacity] = useState(500);
-  const [alreadyRefunded, setAlreadyRefunded] = useState(150);
-  const [refundAmount, setRefundAmount] = useState("100.00");
+  const [targetIntent, setTargetIntent] = useState("");
+  const [totalCapacity, setTotalCapacity] = useState(0);
+  const [alreadyRefunded, setAlreadyRefunded] = useState(0);
+  const [refundAmount, setRefundAmount] = useState("1.00");
   const [reason, setReason] = useState("Customer requested cancellation");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const [refunds, setRefunds] = useState<RefundRecord[]>([
-    {
-      id: "ref_test_0192a714",
-      paymentIntentId: "pi_test_0192a831001",
-      amountMinor: 15000,
-      reason: "Partial item return",
-      status: "SUCCEEDED",
-      compensatingJournalId: "jnl_0192a714_refund",
-      createdAt: "Today, 16:40:11",
-    },
-    {
-      id: "ref_test_0192a502",
-      paymentIntentId: "pi_test_0192a832002",
-      amountMinor: 125000,
-      reason: "Fraud alert quarantine",
-      status: "SUCCEEDED",
-      compensatingJournalId: "jnl_0192a502_refund",
-      createdAt: "Yesterday, 14:12:00",
-    },
-  ]);
+  const [refunds, setRefunds] = useState<RefundRecord[]>([]);
+  const [succeededPayments, setSucceededPayments] = useState<PaymentOption[]>([]);
+
+  const fetchRefundsAndPayments = async () => {
+    try {
+      setLoading(true);
+      setErrorMsg(null);
+
+      // Fetch refunds
+      const refRes = await fetch("/api/ops/refunds");
+      if (refRes.ok) {
+        const refJson = await refRes.json();
+        setRefunds(refJson.data || []);
+      }
+
+      // Fetch payments to populate selectable target intents
+      const payRes = await fetch("/api/payments");
+      if (payRes.ok) {
+        const payJson = await payRes.json();
+        const paymentsList: PaymentOption[] = payJson.data || [];
+        const eligible = paymentsList.filter((p) => p.state === "SUCCEEDED");
+        setSucceededPayments(eligible);
+
+        if (eligible.length > 0 && !targetIntent) {
+          const first = eligible[0];
+          if (first) {
+            setTargetIntent(first.id);
+            const totalMinor = Number(first.amountMinor) || 0;
+            setTotalCapacity(totalMinor / 100);
+          }
+        }
+      }
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "Error connecting to refunds service.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRefundsAndPayments();
+  }, []);
+
+  // Update capacity calculation when selected payment changes
+  useEffect(() => {
+    if (!targetIntent) return;
+    const selected = succeededPayments.find((p) => p.id === targetIntent);
+    if (selected) {
+      const totalMinor = Number(selected.amountMinor) || 0;
+      const totalPesos = totalMinor / 100;
+      setTotalCapacity(totalPesos);
+
+      // Calculate existing refunds for this intent
+      const intentRefunds = refunds.filter(
+        (r) => r.paymentIntentId === targetIntent && r.state !== "FAILED",
+      );
+      const refundedMinor = intentRefunds.reduce((sum, r) => sum + (Number(r.amountMinor) || 0), 0);
+      setAlreadyRefunded(refundedMinor / 100);
+    }
+  }, [targetIntent, succeededPayments, refunds]);
 
   const handleRequestConfirmation = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
     setSuccessMsg(null);
+
+    if (!targetIntent) {
+      setErrorMsg("Please select or enter a valid Target Payment Intent.");
+      return;
+    }
 
     const amountNum = parseFloat(refundAmount);
     if (Number.isNaN(amountNum) || amountNum <= 0) {
@@ -57,7 +113,7 @@ export default function RefundsPage() {
     }
 
     const remainingCapacity = totalCapacity - alreadyRefunded;
-    if (amountNum > remainingCapacity) {
+    if (totalCapacity > 0 && amountNum > remainingCapacity) {
       setErrorMsg(
         `Invariant Violated: Requested ₱${amountNum.toFixed(2)} exceeds remaining refundable capacity (₱${remainingCapacity.toFixed(2)}). Total payment was ₱${totalCapacity.toFixed(2)}, already refunded ₱${alreadyRefunded.toFixed(2)}.`,
       );
@@ -67,28 +123,48 @@ export default function RefundsPage() {
     setIsConfirmOpen(true);
   };
 
-  const handleExecuteRefund = () => {
-    const amountNum = parseFloat(refundAmount);
-    const newId = `ref_test_${Date.now().toString(36)}`;
-    const newRefund: RefundRecord = {
-      id: newId,
-      paymentIntentId: targetIntent,
-      amountMinor: Math.round(amountNum * 100),
-      reason,
-      status: "SUCCEEDED",
-      compensatingJournalId: `jnl_${newId}_refund`,
-      createdAt: "Just now",
-    };
+  const handleExecuteRefund = async () => {
+    setIsSubmitting(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
 
-    setRefunds([newRefund, ...refunds]);
-    setAlreadyRefunded((prev) => prev + amountNum);
-    setIsConfirmOpen(false);
-    setSuccessMsg(
-      `Refund ${newId} succeeded! Compensating ledger journal ${newRefund.compensatingJournalId} posted (Dr 2000 Payable / Cr 1000 Cash).`,
-    );
+    try {
+      const amountNum = parseFloat(refundAmount);
+      const amountMinor = Math.round(amountNum * 100).toString();
+
+      const res = await fetch("/api/ops/refunds", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": `ref_${crypto.randomUUID().replace(/-/g, "")}`,
+        },
+        body: JSON.stringify({
+          paymentIntentId: targetIntent,
+          amountMinor,
+          reason,
+          currency: "PHP",
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.message || json.detail || `Refund rejected: HTTP ${res.status}`);
+      }
+
+      setIsConfirmOpen(false);
+      setSuccessMsg(
+        `Refund ${json.data?.id || "submitted"} executed! Compensating double-entry ledger journal posted.`,
+      );
+      await fetchRefundsAndPayments();
+    } catch (err) {
+      setIsConfirmOpen(false);
+      setErrorMsg(err instanceof Error ? err.message : "Failed to execute refund.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const remaining = totalCapacity - alreadyRefunded;
+  const remaining = Math.max(0, totalCapacity - alreadyRefunded);
 
   return (
     <div>
@@ -122,13 +198,30 @@ export default function RefundsPage() {
               >
                 Target Payment Intent ID
               </label>
-              <input
-                id="target-intent-input"
-                type="text"
-                className={styles.inputField}
-                value={targetIntent}
-                onChange={(e) => setTargetIntent(e.target.value)}
-              />
+              {succeededPayments.length > 0 ? (
+                <select
+                  id="target-intent-input"
+                  className={styles.inputField}
+                  value={targetIntent}
+                  onChange={(e) => setTargetIntent(e.target.value)}
+                  style={{ width: "100%", padding: "10px 12px", fontFamily: "monospace" }}
+                >
+                  {succeededPayments.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.id} ({p.orderNumber} · ₱{(Number(p.amountMinor) / 100).toFixed(2)})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  id="target-intent-input"
+                  type="text"
+                  className={styles.inputField}
+                  value={targetIntent}
+                  placeholder="pi_..."
+                  onChange={(e) => setTargetIntent(e.target.value)}
+                />
+              )}
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
@@ -221,6 +314,7 @@ export default function RefundsPage() {
                 id="refund-amount-input"
                 type="number"
                 step="0.01"
+                min="0.01"
                 className={styles.inputField}
                 value={refundAmount}
                 onChange={(e) => setRefundAmount(e.target.value)}
@@ -284,10 +378,11 @@ export default function RefundsPage() {
 
             <button
               type="submit"
+              disabled={isSubmitting || totalCapacity <= 0}
               className={styles.buttonDanger}
-              style={{ minHeight: "44px", width: "100%" }}
+              style={{ minHeight: "44px", width: "100%", opacity: isSubmitting ? 0.7 : 1 }}
             >
-              Review &amp; Issue Compensating Refund
+              {isSubmitting ? "Processing Refund…" : "Review & Issue Compensating Refund"}
             </button>
           </form>
         </div>
@@ -309,13 +404,13 @@ export default function RefundsPage() {
           </p>
           <div className={styles.codeBlock} style={{ marginBottom: "14px" }}>
             {`-- Original Payment Success:
-DR 1000 Cash at PayMongo         ₱500.00
-CR 2000 Merchant Settlement      ₱485.00
-CR 4000 Platform Fee Revenue     ₱ 15.00
+DR 1000 Cash at PayMongo         ₱1.00
+CR 2000 Merchant Settlement      ₱0.97
+CR 4000 Platform Fee Revenue     ₱0.03
 
--- Compensating Partial Refund (₱100.00):
-DR 2000 Merchant Settlement      ₱100.00
-CR 1000 Cash at PayMongo         ₱100.00`}
+-- Compensating Partial Refund:
+DR 2000 Merchant Settlement      ₱1.00
+CR 1000 Cash at PayMongo         ₱1.00`}
           </div>
           <p style={{ fontSize: "12px", color: "var(--color-text-muted, #64748b)" }}>
             The ledger remains mathematically conserved: net balance is updated via forward
@@ -329,44 +424,81 @@ CR 1000 Cash at PayMongo         ₱100.00`}
           <h2 className={styles.cardTitle}>Refund Records (payrail_private.refunds)</h2>
           <span className={styles.badgePill}>{refunds.length} REFUNDS</span>
         </div>
-        <div className={styles.tableWrapper}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th scope="col">Refund ID</th>
-                <th scope="col">Payment Intent</th>
-                <th scope="col" className={styles.numCol}>
-                  Amount
-                </th>
-                <th scope="col">Reason</th>
-                <th scope="col">Compensating Journal</th>
-                <th scope="col">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {refunds.map((ref) => (
-                <tr key={ref.id}>
-                  <td>
-                    <code>{ref.id}</code>
-                  </td>
-                  <td>
-                    <code>{ref.paymentIntentId}</code>
-                  </td>
-                  <td className={styles.numCol}>
-                    <Amount amountMinor={ref.amountMinor} currency="PHP" align="right" />
-                  </td>
-                  <td>{ref.reason}</td>
-                  <td>
-                    <code>{ref.compensatingJournalId}</code>
-                  </td>
-                  <td>
-                    <StatusBadge status={ref.status} />
-                  </td>
+        {loading ? (
+          <div style={{ padding: "32px", textAlign: "center", color: "#64748b" }}>
+            Loading refund history…
+          </div>
+        ) : refunds.length > 0 ? (
+          <div className={styles.tableWrapper}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th scope="col">Refund ID</th>
+                  <th scope="col">Payment Intent</th>
+                  <th scope="col" className={styles.numCol}>
+                    Amount
+                  </th>
+                  <th scope="col">Reason</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Created</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {refunds.map((ref) => (
+                  <tr key={ref.id}>
+                    <td>
+                      <code>{ref.id}</code>
+                    </td>
+                    <td>
+                      <code>{ref.paymentIntentId}</code>
+                    </td>
+                    <td className={styles.numCol}>
+                      <Amount
+                        amountMinor={Number(ref.amountMinor) || 0}
+                        currency="PHP"
+                        align="right"
+                      />
+                    </td>
+                    <td>{ref.reason}</td>
+                    <td>
+                      <StatusBadge status={ref.state} />
+                    </td>
+                    <td style={{ color: "#64748b", fontSize: "12px" }}>
+                      {new Date(ref.createdAt).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div style={{ textAlign: "center", padding: "48px 24px" }}>
+            <div style={{ fontSize: "32px", marginBottom: "12px" }}>🛡️</div>
+            <h3
+              style={{ fontSize: "15px", fontWeight: 700, color: "#0f172a", marginBottom: "6px" }}
+            >
+              No Refunds Issued Yet
+            </h3>
+            <p
+              style={{
+                fontSize: "13px",
+                color: "#64748b",
+                maxWidth: "480px",
+                margin: "0 auto 16px",
+              }}
+            >
+              Completed payments can be partially or fully refunded up to their confirmed capacity.
+              Each refund posts a balanced compensating journal entry to the general ledger.
+            </p>
+            <Link
+              href="/demo/qrph"
+              className={styles.buttonPrimary}
+              style={{ display: "inline-block", textDecoration: "none" }}
+            >
+              Make a Test Payment to Refund →
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Two-Step Confirmation Dialog (Fitts's Law & Financial Guardrails) */}
@@ -439,11 +571,12 @@ CR 1000 Cash at PayMongo         ₱100.00`}
             </button>
             <button
               type="button"
+              disabled={isSubmitting}
               className={styles.buttonDanger}
               onClick={handleExecuteRefund}
               style={{ minHeight: "44px" }}
             >
-              Confirm &amp; Post Refund
+              {isSubmitting ? "Posting…" : "Confirm & Post Refund"}
             </button>
           </div>
         </div>

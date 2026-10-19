@@ -758,16 +758,26 @@ export function QrPhPaymentFlow() {
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
-                    marginBottom: "16px",
+                    marginBottom: "12px",
                   }}
                 >
                   <div>
-                    <span style={{ fontSize: "12px", color: "#64748b" }}>Amount Due</span>
+                    <span
+                      style={{
+                        fontSize: "11px",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.04em",
+                        color: "#64748b",
+                      }}
+                    >
+                      Amount Due
+                    </span>
                     <div
                       style={{
                         fontSize: "24px",
                         fontWeight: 700,
                         fontFamily: "var(--font-mono, monospace)",
+                        fontVariantNumeric: "tabular-nums",
                         color: "#0f172a",
                       }}
                     >
@@ -775,12 +785,22 @@ export function QrPhPaymentFlow() {
                     </div>
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <span style={{ fontSize: "11px", color: "#64748b" }}>Expires In</span>
+                    <span
+                      style={{
+                        fontSize: "11px",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.04em",
+                        color: "#64748b",
+                      }}
+                    >
+                      Expires In
+                    </span>
                     <div
                       style={{
                         fontSize: "14px",
                         fontWeight: 600,
                         fontFamily: "monospace",
+                        fontVariantNumeric: "tabular-nums",
                         color: secondsRemaining < 300 ? "#be123c" : "#b45309",
                       }}
                     >
@@ -795,11 +815,11 @@ export function QrPhPaymentFlow() {
                     background: "#ffffff",
                     border: "1px solid #e2e8f0",
                     borderRadius: "10px",
-                    padding: "20px",
+                    padding: "14px",
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
-                    marginBottom: "16px",
+                    marginBottom: "12px",
                   }}
                 >
                   {payment.qrCodeUrl ? (
@@ -807,8 +827,8 @@ export function QrPhPaymentFlow() {
                       src={payment.qrCodeUrl}
                       alt={`PayMongo QR Ph payment QR code for order ${payment.orderNumber}`}
                       style={{
-                        width: "220px",
-                        height: "220px",
+                        width: "180px",
+                        height: "180px",
                         objectFit: "contain",
                         display: "block",
                       }}
@@ -816,8 +836,8 @@ export function QrPhPaymentFlow() {
                   ) : (
                     <div
                       style={{
-                        width: "220px",
-                        height: "220px",
+                        width: "180px",
+                        height: "180px",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -832,7 +852,7 @@ export function QrPhPaymentFlow() {
 
                   <div
                     style={{
-                      marginTop: "12px",
+                      marginTop: "10px",
                       fontSize: "12px",
                       color: "#64748b",
                       display: "flex",
@@ -844,8 +864,8 @@ export function QrPhPaymentFlow() {
                   >
                     <span
                       style={{
-                        width: "8px",
-                        height: "8px",
+                        width: "7px",
+                        height: "7px",
                         borderRadius: "50%",
                         background: "#b45309",
                         animation: "pulse 1.5s infinite",
@@ -862,21 +882,20 @@ export function QrPhPaymentFlow() {
                     background: "#fffbeb",
                     border: "1px solid #fde68a",
                     borderRadius: "8px",
-                    padding: "12px 14px",
-                    marginBottom: "16px",
-                    fontSize: "12px",
+                    padding: "8px 12px",
+                    marginBottom: "12px",
+                    fontSize: "11.5px",
                     color: "#92400e",
                     lineHeight: 1.4,
                   }}
                 >
-                  <strong>TEST MODE:</strong> Do not scan or pay this test QR using a real banking
-                  or e-wallet application (GCash, Maya, ShopeePay, bank apps). Use the official
-                  PayMongo sandbox payment simulator button below.
+                  <strong>TEST MODE:</strong> Do not scan or pay with real banking apps (GCash,
+                  Maya, bank apps). Use the official PayMongo simulator button below.
                 </div>
 
                 {/* Primary Simulator Action Button */}
                 {payment.testUrl && (
-                  <div style={{ marginBottom: "16px" }}>
+                  <div style={{ marginBottom: "12px" }}>
                     <a
                       href={payment.testUrl}
                       target="_blank"
@@ -887,7 +906,9 @@ export function QrPhPaymentFlow() {
                         background: "#0f52ba",
                         color: "#ffffff",
                         textDecoration: "none",
-                        padding: "12px 16px",
+                        padding: "11px 16px",
+                        minHeight: "44px",
+                        boxSizing: "border-box",
                         borderRadius: "6px",
                         fontSize: "14px",
                         fontWeight: 600,
