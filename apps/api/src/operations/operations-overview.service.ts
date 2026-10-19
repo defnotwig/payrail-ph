@@ -503,12 +503,12 @@ export class OperationsOverviewService {
              o.order_number,
              p.amount_minor,
              p.currency,
-             p.state,
+             p.state::text AS state,
              p.created_at
            FROM payrail_private.payment_intents p
            JOIN payrail_private.orders o ON o.id = p.order_id
            WHERE p.merchant_id = $1
-             AND (p.id::text ILIKE $2 OR o.order_number ILIKE $2 OR p.state ILIKE $2)
+             AND (p.id::text ILIKE $2 OR o.order_number ILIKE $2 OR p.state::text ILIKE $2)
            ORDER BY
              CASE WHEN o.order_number ILIKE $3 OR p.id::text ILIKE $3 THEN 0 ELSE 1 END,
              p.created_at DESC
@@ -624,11 +624,11 @@ export class OperationsOverviewService {
              status,
              total_records,
              discrepancy_records,
-             created_at
+             started_at AS created_at
            FROM payrail_private.reconciliation_runs
            WHERE merchant_id = $1
              AND (id::text ILIKE $2 OR status ILIKE $2)
-           ORDER BY created_at DESC
+           ORDER BY started_at DESC
            LIMIT 5`,
         [merchantId, wildcard],
       ),
