@@ -8,9 +8,9 @@ export class DatabasePool extends Pool implements OnModuleDestroy {
     const { DATABASE_URL } = parseEnvironment(process.env);
     super({
       connectionString: DATABASE_URL,
-      max: 5,
+      max: process.env.DB_POOL_MAX ? Number(process.env.DB_POOL_MAX) : 5,
       idleTimeoutMillis: 10_000,
-      connectionTimeoutMillis: 1_000,
+      connectionTimeoutMillis: 10_000,
       keepAlive: true,
     });
 

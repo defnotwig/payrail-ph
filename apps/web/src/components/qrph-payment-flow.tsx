@@ -27,7 +27,7 @@ interface PaymentStateData {
 }
 
 export function QrPhPaymentFlow() {
-  const [amount, setAmount] = useState<number>(1);
+  const amount = 1;
   const [orderNumber, setOrderNumber] = useState<string>(
     () => `ORD-${Math.floor(1000 + Math.random() * 9000)}`,
   );
@@ -39,9 +39,40 @@ export function QrPhPaymentFlow() {
   const [error, setError] = useState<string | null>(null);
   const [secondsRemaining, setSecondsRemaining] = useState<number>(900); // 15 min
 
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000";
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL
+    ? process.env.NEXT_PUBLIC_API_BASE_URL.replace(/\/+$/, "")
+    : "";
+  const paymentsEndpoint = apiBase ? `${apiBase}/payments` : "/api/payments";
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const pollCountRef = useRef<number>(0);
+
+  // Restore payment state from session on refresh
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem("payrail_demo_payment");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed?.id) {
+          setPayment(parsed);
+        }
+      }
+    } catch {
+      // sessionStorage unavailable in non-browser or privacy mode
+    }
+  }, []);
+
+  // Persist payment state updates to session
+  useEffect(() => {
+    try {
+      if (payment) {
+        sessionStorage.setItem("payrail_demo_payment", JSON.stringify(payment));
+      } else {
+        sessionStorage.removeItem("payrail_demo_payment");
+      }
+    } catch {
+      // sessionStorage unavailable
+    }
+  }, [payment]);
 
   // 15-minute countdown timer
   useEffect(() => {
@@ -77,10 +108,11 @@ export function QrPhPaymentFlow() {
     setError(null);
 
     // minor units (cents)
-    const amountMinor = (BigInt(amount) * BigInt(100)).toString();
+    const validAmount = Number.isFinite(amount) && amount > 0 ? Math.floor(amount) : 1;
+    const amountMinor = (BigInt(validAmount) * BigInt(100)).toString();
 
     try {
-      const res = await fetch(`${apiBase}/payments`, {
+      const res = await fetch(paymentsEndpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -95,8 +127,9 @@ export function QrPhPaymentFlow() {
       });
 
       if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`Payment creation failed (${res.status}): ${text}`);
+        const data = await res.json().catch(() => ({}));
+        const message = data.message || data.error || `Payment creation failed (${res.status})`;
+        throw new Error(message);
       }
 
       const data: PaymentStateData = await res.json();
@@ -104,7 +137,19 @@ export function QrPhPaymentFlow() {
       setSecondsRemaining(900);
       pollCountRef.current = 0;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create payment intent");
+      const msg = err instanceof Error ? err.message : "";
+      if (
+        msg.includes("Failed to fetch") ||
+        msg.includes("NetworkError") ||
+        msg.includes("Failed to communicate") ||
+        msg.includes("Load failed")
+      ) {
+        setError(
+          "We couldn't reach the sandbox payment service. No new payment was submitted. Try again in a moment.",
+        );
+      } else {
+        setError(msg || "Failed to create payment intent");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -122,11 +167,14 @@ export function QrPhPaymentFlow() {
     }
 
     const intervalMs = pollCountRef.current < 15 ? 2000 : 5000;
+    const paymentPollUrl = apiBase
+      ? `${apiBase}/payments/${payment.id}`
+      : `/api/payments/${payment.id}`;
 
     pollingRef.current = setInterval(async () => {
       pollCountRef.current += 1;
       try {
-        const res = await fetch(`${apiBase}/payments/${payment.id}`);
+        const res = await fetch(paymentPollUrl);
         if (res.ok) {
           const updated: PaymentStateData = await res.json();
           setPayment(updated);
@@ -270,9 +318,10 @@ export function QrPhPaymentFlow() {
                   id="qr-amount"
                   type="number"
                   min="1"
+                  max="1"
                   step="1"
                   value={amount}
-                  onChange={(e) => setAmount(Number(e.target.value))}
+                  readOnly
                   required
                   style={{
                     width: "100%",
@@ -280,10 +329,16 @@ export function QrPhPaymentFlow() {
                     fontSize: "13px",
                     border: "1px solid #cbd5e1",
                     borderRadius: "6px",
-                    background: "#ffffff",
+                    background: "#f8fafc",
+                    color: "#334155",
                     fontVariantNumeric: "tabular-nums",
                   }}
                 />
+                <span
+                  style={{ fontSize: "11px", color: "#64748b", marginTop: "4px", display: "block" }}
+                >
+                  Locked at ₱1.00 (100 minor units) for PayMongo test mode compliance.
+                </span>
               </div>
             </div>
 
@@ -327,6 +382,7 @@ export function QrPhPaymentFlow() {
 
           {error && (
             <div
+              role="alert"
               style={{
                 background: "#fef2f2",
                 border: "1px solid #fecaca",
@@ -422,6 +478,22 @@ export function QrPhPaymentFlow() {
                   background: "#ffffff",
                 }}
               >
+                <div
+                  style={{
+                    display: "inline-block",
+                    background: "#fef3c7",
+                    color: "#92400e",
+                    border: "1px solid #fcd34d",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    padding: "3px 8px",
+                    borderRadius: "4px",
+                    letterSpacing: "0.04em",
+                    marginBottom: "12px",
+                  }}
+                >
+                  SANDBOX RECEIPT · NO REAL MONEY PROCESSED
+                </div>
                 <div
                   style={{
                     display: "flex",
@@ -525,6 +597,9 @@ export function QrPhPaymentFlow() {
                 <button
                   type="button"
                   onClick={() => {
+                    try {
+                      sessionStorage.removeItem("payrail_demo_payment");
+                    } catch {}
                     setPayment(null);
                     setOrderNumber(`ORD-${Math.floor(1000 + Math.random() * 9000)}`);
                     setIdempotencyKey(`idem_${Math.random().toString(36).substring(2, 12)}`);
@@ -756,6 +831,9 @@ export function QrPhPaymentFlow() {
                 <button
                   type="button"
                   onClick={() => {
+                    try {
+                      sessionStorage.removeItem("payrail_demo_payment");
+                    } catch {}
                     setPayment(null);
                     setOrderNumber(`ORD-${Math.floor(1000 + Math.random() * 9000)}`);
                     setIdempotencyKey(`idem_${Math.random().toString(36).substring(2, 12)}`);

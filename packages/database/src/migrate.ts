@@ -23,12 +23,16 @@ async function runMigrations(): Promise<void> {
     process.loadEnvFile(rootEnvironmentFile);
   }
 
-  const databaseUrl = process.env.DATABASE_URL;
+  const databaseUrl = process.env.MIGRATION_DATABASE_URL || process.env.DATABASE_URL;
   if (!databaseUrl || !["postgres:", "postgresql:"].includes(new URL(databaseUrl).protocol)) {
-    throw new Error("DATABASE_URL must be a valid PostgreSQL URL.");
+    throw new Error("DATABASE_URL or MIGRATION_DATABASE_URL must be a valid PostgreSQL URL.");
   }
 
-  const pool = new Pool({ connectionString: databaseUrl, max: 1, connectionTimeoutMillis: 1_000 });
+  const pool = new Pool({
+    connectionString: databaseUrl,
+    max: 1,
+    connectionTimeoutMillis: 10_000,
+  });
   let client: PoolClient | undefined;
   let lockAcquired = false;
 
@@ -103,6 +107,7 @@ async function runMigrations(): Promise<void> {
 
 runMigrations().catch((error: unknown) => {
   const message = error instanceof Error ? error.message : "unknown error";
-  console.error(`Migration process failed: ${message}`);
+  const sanitized = message.replace(/(postgres(?:ql)?:\/\/[^:]+:)[^@]+(@)/gi, "$1***$2");
+  console.error(`Migration process failed: ${sanitized}`);
   process.exitCode = 1;
 });

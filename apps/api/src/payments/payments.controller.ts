@@ -5,7 +5,9 @@ import { PaymentsService } from "./payments.service";
 import { AllowApiKey, Permissions, type OperatorRequest } from "../auth/authorization";
 import { identifier, money, pageLimit, parseInput, requiredIdempotency } from "../auth/validation";
 const bodySchema = z.strictObject({
-  amountMinor: money,
+  amountMinor: money.refine((value) => BigInt(value) >= 100n, {
+    message: "Minimum transaction amount is PHP 1.00 (100 minor units)",
+  }),
   currency: z.literal("PHP").optional(),
   orderNumber: identifier.optional(),
   description: z.string().max(240).optional(),

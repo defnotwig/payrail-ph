@@ -77,8 +77,8 @@ export class PayMongoAdapter {
     operation?: ProviderOperation,
   ): Promise<QrPhPaymentResult> {
     this.assertAvailable();
-    if (amountMinor <= 0n || amountMinor > BigInt(Number.MAX_SAFE_INTEGER) || currency !== "PHP")
-      throw new Error("Unsupported exact PHP amount");
+    if (amountMinor < 100n || amountMinor > BigInt(Number.MAX_SAFE_INTEGER) || currency !== "PHP")
+      throw new Error("Unsupported exact PHP amount: minimum is PHP 1.00 (100 minor units)");
     if (this.mode === "fixture") {
       const mockPiId = `pi_fixture_${crypto.randomBytes(12).toString("hex")}`;
       const mockPmId = `pm_fixture_${crypto.randomBytes(12).toString("hex")}`;
@@ -96,14 +96,19 @@ export class PayMongoAdapter {
     }
 
     // 1. Create PaymentIntent
+    const piHeaders: Record<string, string> = {
+      Authorization: this.getAuthHeader(),
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    };
+    if (operation?.key) {
+      piHeaders["Idempotency-Key"] = operation.key;
+    }
+
     const piResponse = await fetch(`${this.baseUrl}/payment_intents`, {
       method: "POST",
       signal: AbortSignal.timeout(10000),
-      headers: {
-        Authorization: this.getAuthHeader(),
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
+      headers: piHeaders,
       body: JSON.stringify({
         data: {
           attributes: {
@@ -234,7 +239,7 @@ export class PayMongoAdapter {
     }, {});
 
     const timestamp = parts.t;
-    const expectedSig = parts.te;
+    const expectedSig = parts.te || parts.li;
 
     if (!timestamp || !expectedSig) {
       return false;

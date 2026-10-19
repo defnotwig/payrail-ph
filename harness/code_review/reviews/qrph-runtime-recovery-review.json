@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 2,
+  "reviewedBaseSha": "bc1cd0fc4fa70565c8e99e6a46f43f65db11a39f",
+  "reviewedDiffSha256": "1c8ea89d807896cc04d1d3ac3b4708a6690af97f5e451fee184d0dfc168bbafa",
+  "reviewer": "codex-subagent/independent-review",
+  "reviewSource": "separate-agent-review",
+  "reviewReport": "qrph-runtime-recovery-review.md",
+  "reviewReportSha256": "ebf154702c7d0cef481b5b41c1382e06633e20eab6d746aa470d2f28e2755f11",
+  "reviewedAt": "2026-10-19T01:13:02.979Z",
+  "verdict": "approve",
+  "findings": []
+}
