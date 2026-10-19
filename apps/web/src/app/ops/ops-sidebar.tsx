@@ -232,33 +232,36 @@ function IsoIcon({ className }: { className?: string }) {
 
 const navGroups: NavGroupDef[] = [
   {
-    title: "OPERATIONS",
+    title: "HOME",
+    items: [{ label: "Overview", href: "/ops", exact: true, icon: HomeIcon }],
+  },
+  {
+    title: "PAYMENTS",
     items: [
-      { label: "Overview", href: "/ops", exact: true, icon: HomeIcon },
-      { label: "Payments", href: "/ops/transactions", icon: PaymentsIcon },
+      { label: "Transactions", href: "/ops/transactions", icon: PaymentsIcon },
       { label: "Refunds", href: "/ops/refunds", icon: RefundsIcon },
     ],
   },
   {
-    title: "MONEY & SETTLEMENT",
+    title: "MONEY",
     items: [
       { label: "Ledger", href: "/ops/ledger", icon: LedgerIcon },
       { label: "Reconciliation", href: "/ops/reconciliation", icon: ReconciliationIcon },
     ],
   },
   {
-    title: "DEVELOPERS",
+    title: "OPERATIONS",
     items: [
-      { label: "Webhooks & API", href: "/ops/developer", icon: WebhookIcon },
+      { label: "Webhooks", href: "/ops/developer", icon: WebhookIcon },
       { label: "Jobs & DLQ", href: "/ops/jobs", icon: JobsIcon },
     ],
   },
   {
-    title: "RELIABILITY & LABS",
+    title: "LABS",
     items: [
       { label: "Cards & 3DS", href: "/ops/cards", icon: CardsIcon },
-      { label: "Reliability Lab", href: "/ops/reliability-lab", icon: ZapIcon },
-      { label: "ISO 8583 Lab", href: "/ops/iso8583", icon: IsoIcon },
+      { label: "Reliability", href: "/ops/reliability-lab", icon: ZapIcon },
+      { label: "ISO 8583", href: "/ops/iso8583", icon: IsoIcon },
     ],
   },
 ];
@@ -347,13 +350,24 @@ export function OpsSidebar({ isMobileOpen = false, onCloseMobile }: OpsSidebarPr
           </button>
         </div>
 
-        {/* Workspace / Sandbox Status Badge */}
-        <div className={styles.sidebarWorkspaceCard}>
+        {/* Merchant Workspace Info */}
+        <div
+          className={styles.sidebarWorkspaceCard}
+          style={{ background: "#f8fafc", borderColor: "#e2e8f0" }}
+        >
           <div className={styles.sidebarWorkspaceHeader}>
-            <span className={styles.workspaceDot} aria-hidden="true" />
-            <span className={styles.workspaceTitle}>SANDBOX / TEST MODE</span>
+            <span
+              className={styles.workspaceDot}
+              style={{ background: "#0f52ba" }}
+              aria-hidden="true"
+            />
+            <span className={styles.workspaceTitle} style={{ color: "#0f172a" }}>
+              DEMO MERCHANT
+            </span>
           </div>
-          <p className={styles.workspaceSubtext}>PayMongo Test · Hosted PostgreSQL</p>
+          <p className={styles.workspaceSubtext} style={{ color: "#64748b" }}>
+            Acme Retail PH (Sandbox)
+          </p>
         </div>
 
         {/* Navigation Groups */}

@@ -210,9 +210,24 @@ export function OpsHeader({ onToggleMobileSidebar }: OpsHeaderProps) {
           </span>
         </div>
 
-        {/* Sandbox Badge */}
-        <span className={styles.badgeSandbox} role="status">
-          TEST MODE
+        {/* Single Global Environment Indicator */}
+        <span
+          className={styles.badgeSandbox}
+          role="status"
+          title="Sandbox environment · No real funds processed"
+        >
+          <span
+            style={{
+              width: "6px",
+              height: "6px",
+              borderRadius: "50%",
+              background: "#d97706",
+              display: "inline-block",
+              marginRight: "6px",
+            }}
+            aria-hidden="true"
+          />
+          TEST · No real funds
         </span>
 
         {/* Return to Public Site */}

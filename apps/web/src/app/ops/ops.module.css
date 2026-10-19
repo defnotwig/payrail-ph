@@ -28,7 +28,7 @@
   height: 100vh;
   z-index: 40;
   transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  overflow-x: visible;
+  overflow-x: hidden;
   overflow-y: auto;
 }
 
@@ -118,7 +118,7 @@
 
 .sidebarCollapseBtn {
   position: absolute;
-  right: -12px;
+  right: 8px;
   top: 20px;
   width: 24px;
   height: 24px;
