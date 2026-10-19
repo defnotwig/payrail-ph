@@ -117,8 +117,8 @@ function TransactionsContent() {
   return (
     <div>
       <PageHeader
-        title="Transaction Investigation & Payment Intents"
-        subtitle="Progressive disclosure of payment lifecycle, idempotency records, and verified provider evidence."
+        title="Payments"
+        subtitle="Search and inspect payment activity."
         actions={
           <div className={styles.flexRow} style={{ flexWrap: "wrap", gap: "8px" }}>
             <input
@@ -198,7 +198,6 @@ function TransactionsContent() {
         <div className={styles.card}>
           <div className={styles.cardHeader}>
             <h2 className={styles.cardTitle}>Transactions ({filtered.length})</h2>
-            <span className={styles.badgePill}>POSTGRESQL AUDIT</span>
           </div>
           <div className={styles.tableWrapper}>
             <table className={styles.table}>
@@ -272,36 +271,23 @@ function TransactionsContent() {
                           <span style={{ fontSize: "12px", color: "#64748b" }}>{tx.createdAt}</span>
                         </td>
                         <td>
-                          <div style={{ display: "flex", gap: "6px" }}>
-                            <button
-                              type="button"
-                              className={styles.buttonSecondary}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedTx(tx);
-                              }}
-                              style={{ padding: "6px 10px", fontSize: "12px", minHeight: "36px" }}
-                            >
-                              Quick View
-                            </button>
-                            <Link
-                              href={`/ops/transactions/${tx.id}`}
-                              className={styles.buttonSecondary}
-                              style={{
-                                padding: "6px 10px",
-                                fontSize: "12px",
-                                minHeight: "36px",
-                                textDecoration: "none",
-                                color: "#0f52ba",
-                                fontWeight: 600,
-                                display: "inline-flex",
-                                alignItems: "center",
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              Inspect →
-                            </Link>
-                          </div>
+                          <Link
+                            href={`/ops/transactions/${tx.id}`}
+                            className={styles.buttonSecondary}
+                            style={{
+                              padding: "6px 12px",
+                              fontSize: "12px",
+                              minHeight: "36px",
+                              textDecoration: "none",
+                              color: "#0f52ba",
+                              fontWeight: 600,
+                              display: "inline-flex",
+                              alignItems: "center",
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            View →
+                          </Link>
                         </td>
                       </tr>
                     );
@@ -312,7 +298,7 @@ function TransactionsContent() {
                       <div className={styles.tableEmptyState}>
                         <h3 className={styles.emptyStateTitle}>No transactions recorded</h3>
                         <p className={styles.emptyStateDesc}>
-                          No transactions matching your filter exist in the PostgreSQL database.
+                          No transactions matching your search or filters were found.
                         </p>
                         <Link
                           href="/demo/qrph"

@@ -328,8 +328,8 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
       </div>
 
       <PageHeader
-        title={`Transaction: ${payment.orderNumber || payment.id}`}
-        subtitle={`Authoritative audit record for payment intent ${payment.id}. Double-entry ledgering and HMAC-SHA256 signature verified.`}
+        title={`Payment: ${payment.orderNumber || payment.id}`}
+        subtitle={`Payment record for order ${payment.orderNumber || payment.id} · Provider: ${payment.provider}`}
         actions={
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <StatusBadge status={payment.state} />
