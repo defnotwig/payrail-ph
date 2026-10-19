@@ -1,12 +1,12 @@
 {
   "schemaVersion": 2,
-  "reviewedBaseSha": "bb5f2d1744498467e16e21fd774a46b0283c7df1",
-  "reviewedDiffSha256": "baef3ec322a328a4581e53ec9fc19c2e615bee5c6dcc1f3ee1f80aa0ef5be4ee",
+  "reviewedBaseSha": "2c8f32a5069f7337c4221264feceedd0585f2fc3",
+  "reviewedDiffSha256": "1c8ea89d807896cc04d1d3ac3b4708a6690af97f5e451fee184d0dfc168bbafa",
   "reviewer": "codex-subagent/independent-review",
   "reviewSource": "separate-agent-review",
   "reviewReport": "qrph-staging-promotion-review.md",
-  "reviewReportSha256": "9a2a0e5bab92d1b725068f18cc9623e5dc279fdca0ad1574040a6d4d4530960f",
-  "reviewedAt": "2026-10-18T09:00:00Z",
+  "reviewReportSha256": "5fc72c26ad6a28ffe3464b477421c2578b3ed31d9a3ae30de16a62b44bdf2a18",
+  "reviewedAt": "2026-10-19T01:13:02.979Z",
   "verdict": "approve",
   "findings": []
 }
