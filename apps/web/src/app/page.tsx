@@ -56,15 +56,10 @@ export default function Home() {
         <div className="hero-copy">
           <p className="hero-label hero-label-sandbox">SANDBOX ONLY</p>
           <p className="hero-label hero-label-provider">PAYMONGO TEST MODE</p>
-          <h1 id="hero-title">PayRail PH</h1>
-          <h2>
-            Payments move forward only
-            <br className="wide-break" /> after verified provider evidence
-            <br className="wide-break" /> is recorded.
-          </h2>
+          <h1 id="hero-title">Payments you can inspect end to end.</h1>
           <p className="hero-intro">
-            A technical portfolio showing how PayMongo sandbox payments are verified, persisted, and
-            reconciled with an internal double-entry ledger.
+            A sandbox payment orchestration platform built around QR Ph, idempotency, webhooks and
+            financial consistency.
           </p>
           <div
             style={{
@@ -75,11 +70,11 @@ export default function Home() {
               marginTop: "16px",
             }}
           >
-            <a className="primary-link" href="#interactive-demo">
-              Try ₱1.00 QR Ph Checkout <span aria-hidden="true">↓</span>
-            </a>
+            <Link className="primary-link" href="/demo/qrph">
+              Try QR Ph <span aria-hidden="true">→</span>
+            </Link>
             <Link
-              href="/demo/qrph"
+              href="/ops/transactions"
               style={{
                 fontSize: "14px",
                 fontWeight: 600,
@@ -87,13 +82,13 @@ export default function Home() {
                 textDecoration: "underline",
               }}
             >
-              Open Standalone Checkout ↗
+              Explore payments <span aria-hidden="true">↗</span>
             </Link>
           </div>
           <p className="evidence-note" id="reliability" role="status">
             <span className="status-dot" aria-hidden="true" />
             <span>
-              Sandbox integration evidence: <b>verified in CI & sandbox</b>
+              PayMongo Test Mode · Signed Webhooks · Double-Entry Ledger · PostgreSQL · Sandbox Only
             </span>
           </p>
         </div>
