@@ -530,6 +530,226 @@ export function QrPhPaymentFlow() {
                   </button>
                 </div>
               </div>
+            ) : payment.state === "FAILED" ? (
+              /* Failed State */
+              <div style={{ textAlign: "center", padding: "12px 0 8px 0" }}>
+                <div
+                  style={{
+                    width: "48px",
+                    height: "48px",
+                    background: "#fef2f2",
+                    border: "1px solid #fecaca",
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    margin: "0 auto 16px auto",
+                    color: "#dc2626",
+                    fontSize: "22px",
+                    fontWeight: "bold",
+                  }}
+                  aria-hidden="true"
+                >
+                  ✕
+                </div>
+                <h3
+                  style={{
+                    margin: "0 0 6px 0",
+                    fontSize: "20px",
+                    fontWeight: 700,
+                    color: "#0f172a",
+                  }}
+                >
+                  Transfer was not completed
+                </h3>
+                <p
+                  style={{
+                    margin: "0 0 20px 0",
+                    fontSize: "14px",
+                    color: "#64748b",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  Your banking app or e-wallet declined the transaction. No money was received by
+                  PayRail. Please verify your account balance or try another payment method.
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <button
+                    type="button"
+                    onClick={handleReset}
+                    style={{
+                      background: "#0f52ba",
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: "6px",
+                      padding: "12px 16px",
+                      fontSize: "14px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Try again
+                  </button>
+                  <Link
+                    href={`/ops/transactions/${payment.id}`}
+                    style={{
+                      display: "block",
+                      background: "#ffffff",
+                      color: "#0f172a",
+                      border: "1px solid #cbd5e1",
+                      textDecoration: "none",
+                      padding: "10px 16px",
+                      borderRadius: "6px",
+                      fontSize: "14px",
+                      fontWeight: 500,
+                    }}
+                  >
+                    Inspect in Operator Dashboard →
+                  </Link>
+                </div>
+              </div>
+            ) : payment.state === "EXPIRED" ? (
+              /* Expired State */
+              <div style={{ textAlign: "center", padding: "12px 0 8px 0" }}>
+                <div
+                  style={{
+                    width: "48px",
+                    height: "48px",
+                    background: "#fffbeb",
+                    border: "1px solid #fde68a",
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    margin: "0 auto 16px auto",
+                    color: "#b45309",
+                    fontSize: "22px",
+                    fontWeight: "bold",
+                  }}
+                  aria-hidden="true"
+                >
+                  ⏱
+                </div>
+                <h3
+                  style={{
+                    margin: "0 0 6px 0",
+                    fontSize: "20px",
+                    fontWeight: 700,
+                    color: "#0f172a",
+                  }}
+                >
+                  QR code expired
+                </h3>
+                <p
+                  style={{
+                    margin: "0 0 20px 0",
+                    fontSize: "14px",
+                    color: "#64748b",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  For your security, dynamic QR Ph codes are valid for 30 minutes. If you already
+                  completed the transfer in your bank app, our automated system will reconcile it
+                  shortly.
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <button
+                    type="button"
+                    onClick={handleReset}
+                    style={{
+                      background: "#0f52ba",
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: "6px",
+                      padding: "12px 16px",
+                      fontSize: "14px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Generate new QR code
+                  </button>
+                  <Link
+                    href={`/ops/transactions/${payment.id}`}
+                    style={{
+                      display: "block",
+                      background: "#ffffff",
+                      color: "#0f172a",
+                      border: "1px solid #cbd5e1",
+                      textDecoration: "none",
+                      padding: "10px 16px",
+                      borderRadius: "6px",
+                      fontSize: "14px",
+                      fontWeight: 500,
+                    }}
+                  >
+                    Inspect in Operator Dashboard →
+                  </Link>
+                </div>
+              </div>
+            ) : payment.state === "UNKNOWN_REQUIRES_RECONCILIATION" ? (
+              /* Reconciling State */
+              <div style={{ textAlign: "center", padding: "12px 0 8px 0" }}>
+                <div
+                  style={{
+                    width: "48px",
+                    height: "48px",
+                    background: "#eff6ff",
+                    border: "1px solid #bfdbfe",
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    margin: "0 auto 16px auto",
+                    color: "#1d4ed8",
+                    fontSize: "22px",
+                    fontWeight: "bold",
+                  }}
+                  aria-hidden="true"
+                >
+                  ℹ
+                </div>
+                <h3
+                  style={{
+                    margin: "0 0 6px 0",
+                    fontSize: "20px",
+                    fontWeight: 700,
+                    color: "#0f172a",
+                  }}
+                >
+                  Verifying payment with bank
+                </h3>
+                <p
+                  style={{
+                    margin: "0 0 20px 0",
+                    fontSize: "14px",
+                    color: "#64748b",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  We detected a brief connection interruption while confirming your payment. Your
+                  funds are protected. We are verifying the bank confirmation registry now.
+                  Reference:{" "}
+                  <strong style={{ fontFamily: "monospace" }}>{payment.orderNumber}</strong>.
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <Link
+                    href={`/ops/transactions/${payment.id}`}
+                    style={{
+                      display: "block",
+                      background: "#0f172a",
+                      color: "#ffffff",
+                      textDecoration: "none",
+                      padding: "12px 16px",
+                      borderRadius: "6px",
+                      fontSize: "14px",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Inspect in Operator Dashboard →
+                  </Link>
+                </div>
+              </div>
             ) : (
               /* Awaiting Payment State */
               <div>

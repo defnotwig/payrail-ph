@@ -162,6 +162,28 @@ function validatePush(env) {
   );
 }
 
+export function isProductionApiTargetValid(url, env = process.env) {
+  const isProd =
+    env.NODE_ENV === "production" ||
+    env.APP_ENV === "production" ||
+    env.VERCEL === "1" ||
+    Boolean(env.VERCEL_ENV && env.VERCEL_ENV !== "development");
+
+  if (!isProd) return true;
+  if (!url || typeof url !== "string") return false;
+
+  const trimmed = url.trim().replace(/\/+$/, "");
+  if (!trimmed.startsWith("https://")) return false;
+
+  try {
+    const parsed = new URL(trimmed);
+    const host = parsed.hostname.toLowerCase();
+    return !(host === "localhost" || host === "127.0.0.1" || host === "0.0.0.0" || host === "::1");
+  } catch {
+    return false;
+  }
+}
+
 export function runRepositoryPolicy(env = process.env) {
   const failures = env.PR_TITLE ? validatePullRequest(env) : validatePush(env);
   if (failures > 0) {

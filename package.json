@@ -22,7 +22,8 @@
     "build": "pnpm -r --if-present build",
     "db:migrate": "pnpm --filter @payrail/database migrate",
     "db:local:start": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-local-postgres.ps1",
-    "db:local:stop": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/stop-local-postgres.ps1"
+    "db:local:stop": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/stop-local-postgres.ps1",
+    "demo:merchant:provision": "node scripts/provision-demo-merchant.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

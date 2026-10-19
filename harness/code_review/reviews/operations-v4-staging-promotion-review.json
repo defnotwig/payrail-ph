@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 2,
+  "reviewedBaseSha": "a711e8491b2851c688e3aec995f9692ebe34a049",
+  "reviewedDiffSha256": "445e28f33b29d91b1a08a49f61b998e01a9cd43e691d354311d6e77c6416b43a",
+  "reviewer": "codex-subagent/independent-review",
+  "reviewSource": "separate-agent-review",
+  "reviewReport": "operations-v4-staging-promotion-review.md",
+  "reviewReportSha256": "00524d69155a5c9f9d8cf5aada6b983db2a7c7e67b81187215913cfa40809c0a",
+  "reviewedAt": "2026-10-19T09:10:00.000Z",
+  "verdict": "approve",
+  "findings": []
+}
