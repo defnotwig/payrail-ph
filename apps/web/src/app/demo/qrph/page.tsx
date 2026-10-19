@@ -27,11 +27,9 @@ export default function QrPhDemoPage() {
 
       <main className={styles.main}>
         <div className={styles.heroSection}>
-          <h1 className={styles.title}>QR Ph Sandbox Checkout</h1>
+          <h1 className={styles.title}>QR Ph Checkout Demo</h1>
           <p className={styles.subtitle}>
-            Experience real-time Philippine QR Ph payment processing in test mode. Generates a
-            genuine PayMongo dynamic QR Ph intent, verifies incoming webhook signatures, and records
-            balanced double-entry ledger transactions.
+            Experience simple, real-time Philippine QR Ph payments powered by PayMongo sandbox.
           </p>
         </div>
 

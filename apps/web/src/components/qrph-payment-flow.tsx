@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Amount, EnvironmentBadge, StatusBadge } from "./ui";
+import { QrCodeSvg } from "./qr-code-svg";
 
 interface PaymentStateData {
   id: string;
@@ -27,17 +28,18 @@ interface PaymentStateData {
 }
 
 export function QrPhPaymentFlow() {
-  const amount = 1;
+  const amount = 1; // ₱1.00 standard PayMongo test amount
   const [orderNumber, setOrderNumber] = useState<string>(
-    () => `ORD-${Math.floor(1000 + Math.random() * 9000)}`,
+    () => `PRL-${Math.floor(100000 + Math.random() * 900000)}`,
   );
   const [idempotencyKey, setIdempotencyKey] = useState<string>(
-    () => `idem_${Math.random().toString(36).substring(2, 12)}`,
+    () => `idem_${Math.random().toString(36).substring(2, 14)}`,
   );
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [payment, setPayment] = useState<PaymentStateData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [secondsRemaining, setSecondsRemaining] = useState<number>(900); // 15 min
+  const [secondsRemaining, setSecondsRemaining] = useState<number>(1800); // 30 min dynamic QR Ph
+  const [showPhoneSimulator, setShowPhoneSimulator] = useState<boolean>(false);
 
   const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL
     ? process.env.NEXT_PUBLIC_API_BASE_URL.replace(/\/+$/, "")
@@ -66,6 +68,16 @@ export function QrPhPaymentFlow() {
     try {
       if (payment) {
         sessionStorage.setItem("payrail_demo_payment", JSON.stringify(payment));
+        // Also add to recorded demo payments list for operator transactions view
+        const listStr = sessionStorage.getItem("payrail_recorded_transactions");
+        const list: PaymentStateData[] = listStr ? JSON.parse(listStr) : [];
+        const existingIdx = list.findIndex((item) => item.id === payment.id);
+        if (existingIdx >= 0) {
+          list[existingIdx] = payment;
+        } else {
+          list.unshift(payment);
+        }
+        sessionStorage.setItem("payrail_recorded_transactions", JSON.stringify(list.slice(0, 50)));
       } else {
         sessionStorage.removeItem("payrail_demo_payment");
       }
@@ -74,7 +86,7 @@ export function QrPhPaymentFlow() {
     }
   }, [payment]);
 
-  // 15-minute countdown timer
+  // 30-minute authoritative countdown timer
   useEffect(() => {
     if (
       !payment ||
@@ -107,7 +119,7 @@ export function QrPhPaymentFlow() {
     setIsSubmitting(true);
     setError(null);
 
-    // minor units (cents)
+    // Minor units (100 minor units = ₱1.00)
     const validAmount = Number.isFinite(amount) && amount > 0 ? Math.floor(amount) : 1;
     const amountMinor = (BigInt(validAmount) * BigInt(100)).toString();
 
@@ -134,7 +146,7 @@ export function QrPhPaymentFlow() {
 
       const data: PaymentStateData = await res.json();
       setPayment(data);
-      setSecondsRemaining(900);
+      setSecondsRemaining(1800);
       pollCountRef.current = 0;
     } catch (err) {
       const msg = err instanceof Error ? err.message : "";
@@ -202,16 +214,27 @@ export function QrPhPaymentFlow() {
     }
   };
 
+  const handleReset = () => {
+    try {
+      sessionStorage.removeItem("payrail_demo_payment");
+    } catch {}
+    setPayment(null);
+    setOrderNumber(`PRL-${Math.floor(100000 + Math.random() * 900000)}`);
+    setIdempotencyKey(`idem_${Math.random().toString(36).substring(2, 14)}`);
+    setShowPhoneSimulator(false);
+  };
+
   return (
     <div
       style={{
-        maxWidth: "680px",
+        maxWidth: "600px",
         margin: "0 auto",
         background: "#ffffff",
         border: "1px solid #e2e8f0",
-        borderRadius: "12px",
-        padding: "28px",
-        boxShadow: "0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.05)",
+        borderRadius: "16px",
+        padding: "32px",
+        boxShadow:
+          "0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.03)",
       }}
     >
       {/* Sandbox Header Strip */}
@@ -221,164 +244,111 @@ export function QrPhPaymentFlow() {
           justifyContent: "space-between",
           alignItems: "center",
           borderBottom: "1px solid #f1f5f9",
-          paddingBottom: "16px",
-          marginBottom: "20px",
+          paddingBottom: "18px",
+          marginBottom: "24px",
         }}
       >
-        <div>
-          <span
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <div
             style={{
-              fontSize: "11px",
-              fontWeight: 700,
-              color: "#64748b",
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
+              width: "32px",
+              height: "32px",
+              borderRadius: "8px",
+              background: "#0f52ba",
+              color: "#ffffff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: 800,
+              fontSize: "14px",
             }}
           >
-            QR Ph Interactive Checkout
-          </span>
-          <h2
-            style={{
-              fontSize: "20px",
-              fontWeight: 700,
-              color: "#0f172a",
-              margin: "2px 0 0 0",
-              letterSpacing: "-0.02em",
-            }}
-          >
-            PayMongo Sandbox Experience
-          </h2>
+            ₱
+          </div>
+          <div>
+            <h2
+              style={{
+                fontSize: "18px",
+                fontWeight: 700,
+                color: "#0f172a",
+                margin: 0,
+                letterSpacing: "-0.02em",
+              }}
+            >
+              Pay with QR Ph
+            </h2>
+            <span style={{ fontSize: "12px", color: "#64748b" }}>PayRail Sandbox Checkout</span>
+          </div>
         </div>
-        <EnvironmentBadge mode="test" label="SANDBOX" />
+        <EnvironmentBadge mode="test" label="TEST MODE" />
       </div>
 
       {!payment ? (
+        /* ================= 1. SIMPLE STRIPE-LIKE CUSTOMER CHECKOUT ================= */
         <form onSubmit={initiatePayment}>
           <div
             style={{
               background: "#f8fafc",
               border: "1px solid #e2e8f0",
-              borderRadius: "8px",
-              padding: "16px",
-              marginBottom: "20px",
+              borderRadius: "12px",
+              padding: "24px",
+              marginBottom: "24px",
+              textAlign: "center",
             }}
           >
-            <div
+            <span
               style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "14px",
-                marginBottom: "14px",
+                fontSize: "12px",
+                fontWeight: 600,
+                color: "#64748b",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+                display: "block",
+                marginBottom: "8px",
               }}
             >
-              <div>
-                <label
-                  htmlFor="qr-order-num"
-                  style={{
-                    display: "block",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    color: "#475569",
-                    marginBottom: "6px",
-                  }}
-                >
-                  Order Reference
-                </label>
-                <input
-                  id="qr-order-num"
-                  type="text"
-                  value={orderNumber}
-                  onChange={(e) => setOrderNumber(e.target.value)}
-                  required
-                  style={{
-                    width: "100%",
-                    padding: "8px 12px",
-                    fontSize: "13px",
-                    border: "1px solid #cbd5e1",
-                    borderRadius: "6px",
-                    background: "#ffffff",
-                    fontFamily: "ui-monospace, monospace",
-                  }}
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="qr-amount"
-                  style={{
-                    display: "block",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    color: "#475569",
-                    marginBottom: "6px",
-                  }}
-                >
-                  Test Amount (PHP)
-                </label>
-                <input
-                  id="qr-amount"
-                  type="number"
-                  min="1"
-                  max="1"
-                  step="1"
-                  value={amount}
-                  readOnly
-                  required
-                  style={{
-                    width: "100%",
-                    padding: "8px 12px",
-                    fontSize: "13px",
-                    border: "1px solid #cbd5e1",
-                    borderRadius: "6px",
-                    background: "#f8fafc",
-                    color: "#334155",
-                    fontVariantNumeric: "tabular-nums",
-                  }}
-                />
-                <span
-                  style={{ fontSize: "11px", color: "#64748b", marginTop: "4px", display: "block" }}
-                >
-                  Locked at ₱1.00 (100 minor units) for PayMongo test mode compliance.
-                </span>
-              </div>
+              Payment Amount
+            </span>
+            <div
+              style={{
+                fontSize: "44px",
+                fontWeight: 800,
+                color: "#0f172a",
+                letterSpacing: "-0.03em",
+                lineHeight: 1.1,
+                marginBottom: "8px",
+              }}
+            >
+              ₱1.00
             </div>
-
-            <div>
-              <label
-                htmlFor="qr-idempotency"
-                style={{
-                  display: "block",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  color: "#475569",
-                  marginBottom: "6px",
-                }}
-              >
-                Authoritative Idempotency Key
-              </label>
-              <input
-                id="qr-idempotency"
-                type="text"
-                value={idempotencyKey}
-                onChange={(e) => setIdempotencyKey(e.target.value)}
-                required
-                style={{
-                  width: "100%",
-                  padding: "8px 12px",
-                  fontSize: "12px",
-                  border: "1px solid #cbd5e1",
-                  borderRadius: "6px",
-                  background: "#ffffff",
-                  fontFamily: "ui-monospace, monospace",
-                  color: "#334155",
-                }}
-              />
-              <span
-                style={{ fontSize: "11px", color: "#64748b", marginTop: "4px", display: "block" }}
-              >
-                Guarantees exactly-once charge execution via PostgreSQL row locks.
-              </span>
+            <div
+              style={{
+                display: "inline-block",
+                background: "#e0f2fe",
+                color: "#0369a1",
+                fontSize: "12px",
+                fontWeight: 600,
+                padding: "3px 10px",
+                borderRadius: "12px",
+              }}
+            >
+              Sandbox test payment
             </div>
           </div>
+
+          <p
+            style={{
+              fontSize: "13px",
+              color: "#64748b",
+              textAlign: "center",
+              lineHeight: 1.5,
+              margin: "0 0 24px 0",
+            }}
+          >
+            Generate a PayMongo QR Ph test payment.
+            <br />
+            No live PayRail funds are processed.
+          </p>
 
           {error && (
             <div
@@ -386,11 +356,12 @@ export function QrPhPaymentFlow() {
               style={{
                 background: "#fef2f2",
                 border: "1px solid #fecaca",
-                borderRadius: "6px",
-                padding: "12px",
+                borderRadius: "8px",
+                padding: "12px 16px",
                 color: "#991b1b",
                 fontSize: "13px",
-                marginBottom: "16px",
+                marginBottom: "20px",
+                textAlign: "left",
               }}
             >
               {error}
@@ -402,48 +373,49 @@ export function QrPhPaymentFlow() {
             disabled={isSubmitting}
             style={{
               width: "100%",
-              padding: "12px",
-              background: "#0f52ba",
+              padding: "14px 20px",
+              background: isSubmitting ? "#94a3b8" : "#0f52ba",
               color: "#ffffff",
               border: "none",
-              borderRadius: "8px",
-              fontSize: "14px",
+              borderRadius: "10px",
+              fontSize: "15px",
               fontWeight: 600,
               cursor: isSubmitting ? "not-allowed" : "pointer",
-              transition: "background 0.15s ease",
+              transition: "all 0.15s ease",
+              boxShadow: "0 2px 4px rgba(15, 82, 186, 0.2)",
             }}
           >
-            {isSubmitting ? "Creating Intent & Generating QR Ph..." : "Generate ₱1.00 QR Ph Code →"}
+            {isSubmitting ? "Generating QR Ph..." : "Generate QR Ph"}
           </button>
         </form>
       ) : (
         <div aria-live="polite">
           {payment.state === "SUCCEEDED" ? (
-            /* ================= CALM DIGNIFIED SUCCESS RECEIPT ================= */
+            /* ================= 2. CALM DIGNIFIED SUCCESS CONFIRMATION ================= */
             <div style={{ textAlign: "left" }}>
               <div
                 style={{
                   background: "#f0fdf4",
                   border: "1px solid #bbf7d0",
-                  borderRadius: "8px",
-                  padding: "18px 20px",
-                  marginBottom: "20px",
+                  borderRadius: "12px",
+                  padding: "20px",
+                  marginBottom: "24px",
                   display: "flex",
                   alignItems: "center",
-                  gap: "14px",
+                  gap: "16px",
                 }}
               >
                 <div
                   style={{
-                    width: "36px",
-                    height: "36px",
+                    width: "44px",
+                    height: "44px",
                     borderRadius: "50%",
                     background: "#16a34a",
                     color: "#ffffff",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    fontSize: "18px",
+                    fontSize: "22px",
                     fontWeight: 700,
                     flexShrink: 0,
                   }}
@@ -453,13 +425,13 @@ export function QrPhPaymentFlow() {
                 <div>
                   <h3
                     style={{
-                      fontSize: "16px",
+                      fontSize: "18px",
                       fontWeight: 700,
                       color: "#166534",
                       margin: "0 0 2px 0",
                     }}
                   >
-                    Payment Confirmed
+                    Payment successful
                   </h3>
                   <p style={{ fontSize: "13px", color: "#15803d", margin: 0 }}>
                     Provider evidence verified via HMAC-SHA256 signature and posted to double-entry
@@ -468,13 +440,13 @@ export function QrPhPaymentFlow() {
                 </div>
               </div>
 
-              {/* Receipt Metadata Card */}
+              {/* Receipt Summary Card */}
               <div
                 style={{
                   border: "1px solid #e2e8f0",
-                  borderRadius: "8px",
-                  padding: "16px",
-                  marginBottom: "20px",
+                  borderRadius: "12px",
+                  padding: "20px",
+                  marginBottom: "24px",
                   background: "#ffffff",
                 }}
               >
@@ -489,19 +461,20 @@ export function QrPhPaymentFlow() {
                     padding: "3px 8px",
                     borderRadius: "4px",
                     letterSpacing: "0.04em",
-                    marginBottom: "12px",
+                    marginBottom: "16px",
                   }}
                 >
                   SANDBOX RECEIPT · NO REAL MONEY PROCESSED
                 </div>
+
                 <div
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "baseline",
                     borderBottom: "1px solid #f1f5f9",
-                    paddingBottom: "12px",
-                    marginBottom: "12px",
+                    paddingBottom: "14px",
+                    marginBottom: "14px",
                   }}
                 >
                   <span
@@ -512,7 +485,7 @@ export function QrPhPaymentFlow() {
                       fontWeight: 600,
                     }}
                   >
-                    Total Settled Amount
+                    Amount Paid
                   </span>
                   <Amount amountMinor={payment.amountMinor} currency="PHP" />
                 </div>
@@ -521,7 +494,7 @@ export function QrPhPaymentFlow() {
                   style={{
                     display: "grid",
                     gridTemplateColumns: "1fr 1fr",
-                    gap: "10px",
+                    gap: "12px",
                     fontSize: "12px",
                   }}
                 >
@@ -532,7 +505,7 @@ export function QrPhPaymentFlow() {
                     </strong>
                   </div>
                   <div>
-                    <span style={{ color: "#64748b", display: "block" }}>Payment Intent</span>
+                    <span style={{ color: "#64748b", display: "block" }}>Payment Intent ID</span>
                     <strong style={{ fontFamily: "ui-monospace, monospace", color: "#0f172a" }}>
                       {payment.id}
                     </strong>
@@ -545,7 +518,7 @@ export function QrPhPaymentFlow() {
                   </div>
                   <div>
                     <span style={{ color: "#64748b", display: "block" }}>Payment Method</span>
-                    <strong style={{ color: "#0f172a" }}>QR Ph Dynamic (EMVCo)</strong>
+                    <strong style={{ color: "#0f172a" }}>QR Ph Dynamic</strong>
                   </div>
                   <div>
                     <span style={{ color: "#64748b", display: "block" }}>Status</span>
@@ -560,94 +533,86 @@ export function QrPhPaymentFlow() {
 
               {/* Receipt Action Buttons */}
               <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                <button
-                  type="button"
-                  onClick={handlePrintReceipt}
-                  style={{
-                    flex: 1,
-                    padding: "10px 16px",
-                    background: "#ffffff",
-                    border: "1px solid #cbd5e1",
-                    borderRadius: "6px",
-                    fontSize: "13px",
-                    fontWeight: 600,
-                    color: "#0f172a",
-                    cursor: "pointer",
-                  }}
-                >
-                  📄 Print / Save Receipt
-                </button>
                 <Link
-                  href="/ops/transactions"
+                  href={`/ops/transactions/${payment.id}`}
                   style={{
                     flex: 1,
                     textAlign: "center",
-                    padding: "10px 16px",
+                    padding: "12px 18px",
                     background: "#0f52ba",
                     border: "none",
-                    borderRadius: "6px",
-                    fontSize: "13px",
+                    borderRadius: "8px",
+                    fontSize: "14px",
                     fontWeight: 600,
                     color: "#ffffff",
                     textDecoration: "none",
                   }}
                 >
-                  Inspect in Console ↗
+                  View transaction ↗
                 </Link>
                 <button
                   type="button"
-                  onClick={() => {
-                    try {
-                      sessionStorage.removeItem("payrail_demo_payment");
-                    } catch {}
-                    setPayment(null);
-                    setOrderNumber(`ORD-${Math.floor(1000 + Math.random() * 9000)}`);
-                    setIdempotencyKey(`idem_${Math.random().toString(36).substring(2, 12)}`);
+                  onClick={handlePrintReceipt}
+                  style={{
+                    padding: "12px 18px",
+                    background: "#ffffff",
+                    border: "1px solid #cbd5e1",
+                    borderRadius: "8px",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    color: "#0f172a",
+                    cursor: "pointer",
                   }}
+                >
+                  📄 Print receipt
+                </button>
+                <button
+                  type="button"
+                  onClick={handleReset}
                   style={{
                     width: "100%",
-                    padding: "10px 16px",
+                    padding: "11px 18px",
                     background: "#f8fafc",
                     border: "1px solid #e2e8f0",
-                    borderRadius: "6px",
+                    borderRadius: "8px",
                     fontSize: "13px",
                     fontWeight: 500,
                     color: "#475569",
                     cursor: "pointer",
-                    marginTop: "6px",
+                    marginTop: "4px",
                   }}
                 >
-                  ← Create Another Test Payment
+                  Make another test payment
                 </button>
               </div>
             </div>
           ) : (
-            /* ================= QR PH SCAN & SIMULATE INTERFACE ================= */
+            /* ================= 3. QR PH WAITING & SIMULATE INTERFACE ================= */
             <div>
-              {/* Sandbox Warning Banner */}
+              {/* Sandbox Safety Notice */}
               <div
                 style={{
                   background: "#fffbeb",
                   border: "1px solid #fde68a",
-                  borderRadius: "8px",
-                  padding: "12px 14px",
-                  marginBottom: "18px",
+                  borderRadius: "10px",
+                  padding: "14px 16px",
+                  marginBottom: "20px",
                   display: "flex",
                   alignItems: "flex-start",
-                  gap: "10px",
+                  gap: "12px",
                 }}
               >
-                <span style={{ fontSize: "16px", lineHeight: 1 }} aria-hidden="true">
+                <span style={{ fontSize: "18px", lineHeight: 1 }} aria-hidden="true">
                   ⚠️
                 </span>
                 <div style={{ fontSize: "12px", color: "#92400e", lineHeight: 1.5 }}>
-                  <strong>Do not scan with a real banking app:</strong> This is a PayMongo test-mode
-                  QR code. Scanning with GCash, Maya, or BDO will fail or deduct real funds. Use the{" "}
-                  <strong>Simulate Payment</strong> button below.
+                  <strong style={{ display: "block", marginBottom: "2px" }}>TEST MODE</strong>
+                  Do not pay this test QR using a real banking or e-wallet application (GCash, Maya,
+                  etc.). Use the official sandbox payment simulator instead.
                 </div>
               </div>
 
-              {/* Amount & Timer Header */}
+              {/* Order Info & Timer Header */}
               <div
                 style={{
                   display: "flex",
@@ -655,7 +620,7 @@ export function QrPhPaymentFlow() {
                   alignItems: "center",
                   background: "#f8fafc",
                   border: "1px solid #e2e8f0",
-                  borderRadius: "8px",
+                  borderRadius: "10px",
                   padding: "14px 18px",
                   marginBottom: "20px",
                 }}
@@ -669,9 +634,9 @@ export function QrPhPaymentFlow() {
                       fontWeight: 600,
                     }}
                   >
-                    Payment Total
+                    Order: {payment.orderNumber}
                   </span>
-                  <Amount amountMinor={payment.amountMinor} currency="PHP" />
+                  <div style={{ fontSize: "20px", fontWeight: 700, color: "#0f172a" }}>₱1.00</div>
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <span
@@ -682,13 +647,13 @@ export function QrPhPaymentFlow() {
                       fontWeight: 600,
                     }}
                   >
-                    QR Code Expires In
+                    Expires In
                   </span>
                   <div
                     style={{
                       fontSize: "16px",
                       fontWeight: 700,
-                      color: secondsRemaining < 120 ? "#dc2626" : "#0f172a",
+                      color: secondsRemaining < 180 ? "#dc2626" : "#0f172a",
                       fontVariantNumeric: "tabular-nums",
                     }}
                   >
@@ -697,70 +662,41 @@ export function QrPhPaymentFlow() {
                 </div>
               </div>
 
-              {/* Primary Action: Official Sandbox Simulator */}
-              {payment.testUrl && (
-                <div
-                  style={{
-                    background: "#eff6ff",
-                    border: "1px solid #bfdbfe",
-                    borderRadius: "8px",
-                    padding: "16px",
-                    marginBottom: "20px",
-                    textAlign: "center",
-                  }}
-                >
-                  <p
+              {/* Official Provider-Returned QR Ph Image */}
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "24px",
+                  background: "#ffffff",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "12px",
+                  marginBottom: "20px",
+                }}
+              >
+                <div style={{ marginBottom: "12px" }}>
+                  <span
                     style={{
-                      fontSize: "13px",
-                      color: "#1e40af",
-                      margin: "0 0 10px 0",
-                      fontWeight: 500,
-                    }}
-                  >
-                    📱 <strong>Browsing on mobile or desktop?</strong> Complete the test payment
-                    instantly using PayMongo&apos;s official simulator:
-                  </p>
-                  <a
-                    href={payment.testUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      background: "#0f52ba",
-                      color: "#ffffff",
-                      padding: "12px 24px",
-                      borderRadius: "6px",
                       fontSize: "14px",
-                      fontWeight: 600,
-                      textDecoration: "none",
-                      boxShadow: "0 1px 3px rgba(15, 82, 186, 0.3)",
+                      fontWeight: 700,
+                      color: "#0f172a",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
                     }}
                   >
-                    Simulate ₱1.00 Payment in PayMongo Sandbox ↗
-                  </a>
+                    QR Ph
+                  </span>
+                  <div style={{ fontSize: "11px", color: "#64748b" }}>
+                    Provider: PayMongo Test Mode
+                  </div>
                 </div>
-              )}
 
-              {/* Dynamic QR Ph Image */}
-              {payment.qrCodeUrl ? (
-                <div
-                  style={{
-                    textAlign: "center",
-                    padding: "20px",
-                    background: "#ffffff",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: "8px",
-                    marginBottom: "20px",
-                  }}
-                >
+                {payment.qrCodeUrl ? (
                   <div
                     style={{
                       display: "inline-block",
-                      padding: "14px",
+                      padding: "16px",
                       background: "#ffffff",
-                      borderRadius: "8px",
+                      borderRadius: "10px",
                       border: "2px solid #0f172a",
                     }}
                   >
@@ -775,69 +711,172 @@ export function QrPhPaymentFlow() {
                       }}
                     />
                   </div>
-                  <div style={{ marginTop: "10px", fontSize: "12px", color: "#64748b" }}>
-                    Standard EMVCo QR Ph (Sandbox Test Mode)
+                ) : (
+                  <div
+                    style={{
+                      display: "inline-block",
+                      padding: "40px 20px",
+                      background: "#f8fafc",
+                      borderRadius: "8px",
+                      color: "#64748b",
+                      fontSize: "13px",
+                      width: "220px",
+                    }}
+                  >
+                    Retrieving QR code from PayMongo...
                   </div>
-                </div>
-              ) : (
+                )}
+
                 <div
                   style={{
-                    textAlign: "center",
-                    padding: "40px 20px",
-                    background: "#f8fafc",
-                    borderRadius: "8px",
-                    border: "1px solid #e2e8f0",
-                    marginBottom: "20px",
-                    color: "#64748b",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "8px",
+                    marginTop: "16px",
                     fontSize: "13px",
+                    color: "#475569",
                   }}
                 >
-                  Retrieving QR code image from PayMongo API...
+                  <span
+                    style={{
+                      display: "inline-block",
+                      width: "8px",
+                      height: "8px",
+                      borderRadius: "50%",
+                      background: payment.state === "PROCESSING" ? "#f59e0b" : "#3b82f6",
+                      animation: "pulse 1.5s infinite",
+                    }}
+                    aria-hidden="true"
+                  />
+                  <span>
+                    {payment.state === "PROCESSING"
+                      ? "Confirming payment with PayMongo webhook..."
+                      : "Waiting for payment..."}
+                  </span>
+                </div>
+              </div>
+
+              {/* Primary Action Button: Simulate Payment */}
+              {payment.testUrl && (
+                <div style={{ marginBottom: "18px" }}>
+                  <a
+                    href={payment.testUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: "block",
+                      textAlign: "center",
+                      background: "#0f52ba",
+                      color: "#ffffff",
+                      padding: "14px 20px",
+                      borderRadius: "10px",
+                      fontSize: "15px",
+                      fontWeight: 600,
+                      textDecoration: "none",
+                      boxShadow: "0 2px 4px rgba(15, 82, 186, 0.25)",
+                    }}
+                  >
+                    Simulate ₱1 payment ↗
+                  </a>
                 </div>
               )}
 
-              {/* Live Polling Status */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "10px",
-                  padding: "12px",
-                  background: "#f8fafc",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: "6px",
-                  fontSize: "13px",
-                  color: "#475569",
-                  marginBottom: "16px",
-                }}
-              >
-                <span
+              {/* Optional Phone-Scan Sandbox Experience */}
+              {payment.testUrl && (
+                <div
                   style={{
-                    display: "inline-block",
-                    width: "8px",
-                    height: "8px",
-                    borderRadius: "50%",
-                    background: "#3b82f6",
-                    animation: "pulse 1.5s infinite",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "10px",
+                    padding: "14px 16px",
+                    marginBottom: "20px",
+                    background: "#f8fafc",
                   }}
-                  aria-hidden="true"
-                />
-                <span>Listening for signed webhook confirmation ({payment.state})...</span>
-              </div>
+                >
+                  <button
+                    type="button"
+                    onClick={() => setShowPhoneSimulator((prev) => !prev)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      width: "100%",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      cursor: "pointer",
+                      padding: 0,
+                      color: "#0f172a",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                    }}
+                  >
+                    <span>📱 Test on phone camera (Sandbox Simulator Shortcut)</span>
+                    <span style={{ fontSize: "16px", color: "#64748b" }}>
+                      {showPhoneSimulator ? "−" : "+"}
+                    </span>
+                  </button>
 
-              {/* Reset Option */}
+                  {showPhoneSimulator && (
+                    <div
+                      style={{
+                        marginTop: "14px",
+                        paddingTop: "14px",
+                        borderTop: "1px solid #e2e8f0",
+                        textAlign: "center",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: "12px",
+                          fontWeight: 700,
+                          color: "#64748b",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                          marginBottom: "4px",
+                        }}
+                      >
+                        TEST SIMULATOR QR
+                      </div>
+                      <p
+                        style={{
+                          fontSize: "12px",
+                          color: "#475569",
+                          margin: "0 0 12px 0",
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        Scan with your phone camera to open the PayMongo sandbox simulator.
+                        <br />
+                        <span style={{ color: "#92400e" }}>
+                          (This is a simulator shortcut, not a QR Ph payment QR.)
+                        </span>
+                      </p>
+                      <div
+                        style={{
+                          display: "inline-block",
+                          padding: "12px",
+                          background: "#ffffff",
+                          borderRadius: "8px",
+                          border: "1px solid #cbd5e1",
+                        }}
+                      >
+                        <QrCodeSvg
+                          value={payment.testUrl}
+                          size={180}
+                          ariaLabel="PayMongo sandbox simulator shortcut QR code"
+                          title="PayMongo sandbox simulator shortcut"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Reset / Cancel Action */}
               <div style={{ textAlign: "center" }}>
                 <button
                   type="button"
-                  onClick={() => {
-                    try {
-                      sessionStorage.removeItem("payrail_demo_payment");
-                    } catch {}
-                    setPayment(null);
-                    setOrderNumber(`ORD-${Math.floor(1000 + Math.random() * 9000)}`);
-                    setIdempotencyKey(`idem_${Math.random().toString(36).substring(2, 12)}`);
-                  }}
+                  onClick={handleReset}
                   style={{
                     background: "none",
                     border: "none",

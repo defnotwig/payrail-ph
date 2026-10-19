@@ -292,6 +292,77 @@ export class PaymentsService {
     );
     return Promise.all(result.rows.map((row) => this.getPaymentIntent(row.id, merchantId)));
   }
+  async getPaymentInvestigation(id: string, merchantId?: string) {
+    if (!merchantId) throw new BadRequestException("Merchant scope is required");
+    const payment = await this.getPaymentIntent(id, merchantId);
+
+    const timelineRes = await this.pool.query(
+      `SELECT id::text, previous_state AS "previousState", next_state AS "nextState", source, provider_event_id AS "providerEventId", created_at AS "createdAt"
+       FROM payrail_private.payment_state_events
+       WHERE payment_intent_id = $1
+       ORDER BY created_at ASC, id ASC`,
+      [id],
+    );
+
+    const ledgerRes = await this.pool.query(
+      `SELECT e.id, e.entry_number AS "entryNumber", e.reference_type AS "referenceType", e.reference_id AS "referenceId", e.description, e.posted_at AS "postedAt",
+              json_agg(
+                json_build_object(
+                  'id', l.id,
+                  'accountNumber', a.account_number,
+                  'accountName', a.name,
+                  'direction', l.direction,
+                  'amountMinor', l.amount_minor::text,
+                  'currency', l.currency
+                ) ORDER BY l.direction ASC
+              ) AS lines
+       FROM payrail_private.journal_entries e
+       JOIN payrail_private.ledger_lines l ON l.journal_entry_id = e.id
+       JOIN payrail_private.accounts a ON a.id = l.account_id
+       WHERE e.merchant_id = $1 AND e.reference_type = 'PAYMENT' AND e.reference_id = $2
+       GROUP BY e.id, e.entry_number, e.reference_type, e.reference_id, e.description, e.posted_at
+       ORDER BY e.posted_at ASC`,
+      [merchantId, id],
+    );
+
+    const webhooksRes = await this.pool.query(
+      `SELECT id, provider, environment, provider_event_id AS "providerEventId", event_type AS "eventType",
+              signature_verified AS "signatureVerified", processing_state AS "processingState", error_message AS "errorMessage",
+              received_at AS "receivedAt", processed_at AS "processedAt", raw_payload AS "rawPayload"
+       FROM payrail_private.provider_events
+       WHERE payment_intent_id = $1 OR (normalized_observation->>'providerPaymentIntentId') = $2
+       ORDER BY received_at ASC`,
+      [id, payment.providerPaymentIntentId || ""],
+    );
+
+    const attemptsRes = await this.pool.query(
+      `SELECT id, provider, provider_account AS "providerAccount", environment, provider_operation_key AS "providerOperationKey",
+              provider_payment_id AS "providerPaymentId", provider_payment_method_id AS "providerPaymentMethodId",
+              submission_state AS "submissionState", created_at AS "createdAt", updated_at AS "updatedAt"
+       FROM payrail_private.payment_attempts
+       WHERE payment_intent_id = $1
+       ORDER BY created_at ASC`,
+      [id],
+    );
+
+    const auditRes = await this.pool.query(
+      `SELECT id, actor_type AS "actorType", actor_id AS "actorId", action, resource_type AS "resourceType",
+              resource_id AS "resourceId", metadata, ip_address AS "ipAddress", created_at AS "createdAt"
+       FROM payrail_private.audit_events
+       WHERE (merchant_id = $1 AND resource_id = $2) OR (metadata->>'paymentIntentId') = $2
+       ORDER BY created_at ASC`,
+      [merchantId, id],
+    );
+
+    return {
+      payment,
+      timeline: timelineRes.rows,
+      ledger: ledgerRes.rows,
+      webhooks: webhooksRes.rows,
+      attempts: attemptsRes.rows,
+      audit: auditRes.rows,
+    };
+  }
   private async transition(
     client: PoolClient,
     id: string,
