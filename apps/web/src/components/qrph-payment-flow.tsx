@@ -758,7 +758,7 @@ export function QrPhPaymentFlow() {
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
-                    marginBottom: "12px",
+                    marginBottom: "8px",
                   }}
                 >
                   <div>
@@ -814,12 +814,12 @@ export function QrPhPaymentFlow() {
                   style={{
                     background: "#ffffff",
                     border: "1px solid #e2e8f0",
-                    borderRadius: "10px",
-                    padding: "14px",
+                    borderRadius: "8px",
+                    padding: "10px",
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
-                    marginBottom: "12px",
+                    marginBottom: "8px",
                   }}
                 >
                   {payment.qrCodeUrl ? (
@@ -852,7 +852,7 @@ export function QrPhPaymentFlow() {
 
                   <div
                     style={{
-                      marginTop: "10px",
+                      marginTop: "6px",
                       fontSize: "12px",
                       color: "#64748b",
                       display: "flex",
@@ -881,12 +881,12 @@ export function QrPhPaymentFlow() {
                   style={{
                     background: "#fffbeb",
                     border: "1px solid #fde68a",
-                    borderRadius: "8px",
-                    padding: "8px 12px",
-                    marginBottom: "12px",
+                    borderRadius: "6px",
+                    padding: "6px 10px",
+                    marginBottom: "8px",
                     fontSize: "11.5px",
                     color: "#92400e",
-                    lineHeight: 1.4,
+                    lineHeight: 1.35,
                   }}
                 >
                   <strong>Test payment:</strong> Use the PayMongo simulator below. Do not scan this
@@ -895,7 +895,7 @@ export function QrPhPaymentFlow() {
 
                 {/* Primary Simulator Action Button */}
                 {payment.testUrl && (
-                  <div style={{ marginBottom: "12px" }}>
+                  <div style={{ marginBottom: "8px" }}>
                     <a
                       href={payment.testUrl}
                       target="_blank"
@@ -925,8 +925,8 @@ export function QrPhPaymentFlow() {
                   <div
                     style={{
                       borderTop: "1px solid #f1f5f9",
-                      paddingTop: "12px",
-                      marginBottom: "16px",
+                      paddingTop: "8px",
+                      marginBottom: "10px",
                     }}
                   >
                     <button
