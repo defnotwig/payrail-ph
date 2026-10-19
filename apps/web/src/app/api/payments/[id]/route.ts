@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 
-export async function GET(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
+export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
     if (!id) {
@@ -14,15 +14,37 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
       "http://127.0.0.1:4000"
     ).replace(/\/+$/, "");
 
+    const isLocalOrTest =
+      process.env.NODE_ENV === "test" ||
+      process.env.APP_ENV === "local" ||
+      (!process.env.VERCEL && !process.env.APP_ENV);
+
     const apiKey =
-      process.env.DEMO_MERCHANT_API_KEY || "sk_test_payrail_demo_merchant_default_9f8e7d6c5b4a";
+      process.env.DEMO_MERCHANT_API_KEY ||
+      (isLocalOrTest ? "sk_test_payrail_demo_merchant_default_9f8e7d6c5b4a" : undefined);
+
+    if (!apiKey) {
+      return NextResponse.json(
+        {
+          error: "CONFIGURATION_ERROR",
+          message:
+            "Demo merchant credentials (DEMO_MERCHANT_API_KEY) are not configured in this environment.",
+        },
+        { status: 503 },
+      );
+    }
 
     const requestId =
-      _request.headers.get("x-request-id") ||
-      _request.headers.get("x-correlation-id") ||
+      request.headers.get("x-request-id") ||
+      request.headers.get("x-correlation-id") ||
       crypto.randomUUID();
 
-    const response = await fetch(`${apiBase}/payments/${encodeURIComponent(id)}`, {
+    const isInvestigation = request.nextUrl.searchParams.get("investigation") === "true";
+    const targetUrl = isInvestigation
+      ? `${apiBase}/payments/${encodeURIComponent(id)}/investigation`
+      : `${apiBase}/payments/${encodeURIComponent(id)}`;
+
+    const response = await fetch(targetUrl, {
       method: "GET",
       headers: {
         Accept: "application/json",
