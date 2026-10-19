@@ -531,7 +531,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                 }}
               >
                 <strong style={{ color: "#334155", display: "block", marginBottom: "4px" }}>
-                  ✓ Exactly-Once Idempotency
+                  ✓ Idempotent Financial Effect
                 </strong>
                 <span style={{ color: "#475569", fontSize: "12px" }}>
                   PostgreSQL unique constraint prevents double-crediting or duplicate charges.

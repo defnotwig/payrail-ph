@@ -41,7 +41,7 @@ export default function QrPhDemoPage() {
           <h2 className={styles.explainerTitle}>Fintech Engineering Invariants in this Flow</h2>
           <div className={styles.explainerGrid}>
             <div>
-              <h3>1. Exactly-Once Idempotency</h3>
+              <h3>1. Idempotent Financial Deduplication</h3>
               <p>
                 Every payment creation sends an authoritative <code>Idempotency-Key</code> header.
                 PostgreSQL checks the unique constraint before dispatching to PayMongo, preventing

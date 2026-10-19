@@ -353,7 +353,7 @@ export function OpsSidebar({ isMobileOpen = false, onCloseMobile }: OpsSidebarPr
             <span className={styles.workspaceDot} aria-hidden="true" />
             <span className={styles.workspaceTitle}>SANDBOX / TEST MODE</span>
           </div>
-          <p className={styles.workspaceSubtext}>PayMongo Test & Local DB</p>
+          <p className={styles.workspaceSubtext}>PayMongo Test · Hosted PostgreSQL</p>
         </div>
 
         {/* Navigation Groups */}
@@ -406,7 +406,7 @@ export function OpsSidebar({ isMobileOpen = false, onCloseMobile }: OpsSidebarPr
         <div className={styles.sidebarFooter}>
           <div className={styles.sidebarHealthIndicator}>
             <span className={styles.healthDot} aria-hidden="true" />
-            <span className={styles.healthText}>All Systems Normal</span>
+            <span className={styles.healthText}>System Operational</span>
           </div>
           <Link href="/" className={styles.sidebarExitLink}>
             <span aria-hidden="true">←</span>

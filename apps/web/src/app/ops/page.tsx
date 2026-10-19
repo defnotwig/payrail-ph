@@ -581,8 +581,8 @@ export default function OpsOverviewPage() {
       {/* Philippine Regulatory & Architecture Footnote */}
       <footer className={styles.regulatoryFooter}>
         <div>
-          <strong>PayRail PH Core Banking & Switching Framework</strong> · Bangko Sentral ng
-          Pilipinas (BSP) Circular No. 1055 (NRPS) Compliant.
+          <strong>PayRail PH Sandbox Orchestration Platform</strong> · Built on National Retail
+          Payment System (NRPS) architectural principles · Test Mode Only.
         </div>
         <div>
           Double-Entry Balanced Settlement: <code>∑ Debits - ∑ Credits === 0</code>
