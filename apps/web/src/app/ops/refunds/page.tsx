@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Amount, PageHeader, StatusBadge } from "../../../components/ui";
+import { Amount, Dialog, PageHeader, StatusBadge } from "../../../components/ui";
 import styles from "../ops.module.css";
 
 interface RefundRecord {
@@ -22,6 +22,7 @@ export default function RefundsPage() {
   const [reason, setReason] = useState("Customer requested cancellation");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   const [refunds, setRefunds] = useState<RefundRecord[]>([
     {
@@ -44,7 +45,7 @@ export default function RefundsPage() {
     },
   ]);
 
-  const handleCreateRefund = (e: React.FormEvent) => {
+  const handleRequestConfirmation = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
     setSuccessMsg(null);
@@ -63,6 +64,11 @@ export default function RefundsPage() {
       return;
     }
 
+    setIsConfirmOpen(true);
+  };
+
+  const handleExecuteRefund = () => {
+    const amountNum = parseFloat(refundAmount);
     const newId = `ref_test_${Date.now().toString(36)}`;
     const newRefund: RefundRecord = {
       id: newId,
@@ -76,6 +82,7 @@ export default function RefundsPage() {
 
     setRefunds([newRefund, ...refunds]);
     setAlreadyRefunded((prev) => prev + amountNum);
+    setIsConfirmOpen(false);
     setSuccessMsg(
       `Refund ${newId} succeeded! Compensating ledger journal ${newRefund.compensatingJournalId} posted (Dr 2000 Payable / Cr 1000 Cash).`,
     );
@@ -99,7 +106,7 @@ export default function RefundsPage() {
           </div>
 
           <form
-            onSubmit={handleCreateRefund}
+            onSubmit={handleRequestConfirmation}
             style={{ display: "flex", flexDirection: "column", gap: "14px" }}
           >
             <div>
@@ -275,8 +282,12 @@ export default function RefundsPage() {
               </div>
             )}
 
-            <button type="submit" className={styles.buttonPrimary}>
-              Issue Refund with Row Lock
+            <button
+              type="submit"
+              className={styles.buttonDanger}
+              style={{ minHeight: "44px", width: "100%" }}
+            >
+              Review &amp; Issue Compensating Refund
             </button>
           </form>
         </div>
@@ -357,6 +368,86 @@ CR 1000 Cash at PayMongo         ₱100.00`}
           </table>
         </div>
       </div>
+
+      {/* Two-Step Confirmation Dialog (Fitts's Law & Financial Guardrails) */}
+      <Dialog
+        isOpen={isConfirmOpen}
+        onClose={() => setIsConfirmOpen(false)}
+        title="Confirm Compensating Refund"
+        description="Verify financial amounts and ledger impact before executing this irreversible monetary operation."
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          <div
+            style={{
+              background: "#fff1f2",
+              border: "1px solid #fecdd3",
+              borderRadius: "8px",
+              padding: "14px",
+              color: "#991b1b",
+              fontSize: "13px",
+              lineHeight: 1.5,
+            }}
+          >
+            <strong>Warning: High-Friction Operational Action</strong>
+            <p style={{ margin: "4px 0 0" }}>
+              This will issue an irreversible compensating double-entry journal entry to the general
+              ledger and decrement the merchant settlement reserve.
+            </p>
+          </div>
+
+          <div
+            style={{
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: "6px",
+              padding: "14px",
+              fontSize: "13px",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+              <span style={{ color: "#64748b" }}>Target Payment Intent:</span>
+              <code>{targetIntent}</code>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+              <span style={{ color: "#64748b" }}>Refund Amount:</span>
+              <strong style={{ color: "#0f172a" }}>
+                ₱{parseFloat(refundAmount || "0").toFixed(2)} PHP
+              </strong>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+              <span style={{ color: "#64748b" }}>Reason:</span>
+              <span>{reason}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span style={{ color: "#64748b" }}>Ledger Effect:</span>
+              <span style={{ fontSize: "12px", fontFamily: "ui-monospace, monospace" }}>
+                DR 2000 / CR 1000
+              </span>
+            </div>
+          </div>
+
+          <div
+            style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "8px" }}
+          >
+            <button
+              type="button"
+              className={styles.buttonSecondary}
+              onClick={() => setIsConfirmOpen(false)}
+              style={{ minHeight: "44px" }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className={styles.buttonDanger}
+              onClick={handleExecuteRefund}
+              style={{ minHeight: "44px" }}
+            >
+              Confirm &amp; Post Refund
+            </button>
+          </div>
+        </div>
+      </Dialog>
     </div>
   );
 }

@@ -7,4 +7,6 @@ export * from "./empty-state";
 export * from "./error-banner";
 export * from "./detail-list";
 export * from "./timeline";
+export * from "./dialog";
+export * from "./skeleton";
 export * from "../qr-code-svg";

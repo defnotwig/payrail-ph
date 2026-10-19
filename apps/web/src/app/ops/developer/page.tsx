@@ -1,159 +1,139 @@
 "use client";
 
-import { useState } from "react";
-import { PageHeader, StatusBadge } from "../../../components/ui";
+import { useEffect, useState } from "react";
+import { PageHeader, Skeleton, StatusBadge } from "../../../components/ui";
 import styles from "../ops.module.css";
 
-interface ApiKey {
+interface ApiKeyRecord {
   id: string;
+  merchantId: string;
   name: string;
-  prefix: string;
+  keyPrefix: string;
   scopes: string[];
+  environment: string;
+  createdAt: string;
+  expiresAt?: string;
+  revokedAt?: string;
+}
+
+interface WebhookEndpointRecord {
+  id: string;
+  url: string;
+  subscribedEvents: string[];
+  isActive: boolean;
   createdAt: string;
 }
 
-interface WebhookEndpoint {
+interface WebhookDeliveryRecord {
   id: string;
-  url: string;
-  events: string[];
-  status: "ACTIVE" | "DISABLED";
-  secretMasked: string;
+  endpointId: string;
+  eventId: string;
+  eventType: string;
+  status: string;
+  statusCode?: number;
+  attemptCount: number;
+  createdAt: string;
+}
+
+interface DeveloperResponse {
+  data?: {
+    keys?: ApiKeyRecord[];
+    webhooks?: WebhookEndpointRecord[];
+    deliveries?: WebhookDeliveryRecord[];
+  };
 }
 
 export default function DeveloperPlatformPage() {
-  const [createdPlainKey, setCreatedPlainKey] = useState<string | null>(null);
-  const [endpointUrl, setEndpointUrl] = useState("https://merchant.example.com/api/webhooks");
-  const [ssrfError, setSsrfError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [apiKeys, setApiKeys] = useState<ApiKeyRecord[]>([]);
+  const [webhooks, setWebhooks] = useState<WebhookEndpointRecord[]>([]);
+  const [deliveries, setDeliveries] = useState<WebhookDeliveryRecord[]>([]);
 
-  const [apiKeys, setApiKeys] = useState<ApiKey[]>([
-    {
-      id: "key_0192a801",
-      name: "Default Sandbox Server Key",
-      prefix: "pr_test_9921",
-      scopes: ["payments:read", "payments:write", "refunds:write"],
-      createdAt: "Today, 10:00:00",
-    },
-  ]);
-
-  const [webhooks, setWebhooks] = useState<WebhookEndpoint[]>([
-    {
-      id: "wh_0192a701",
-      url: "https://merchant.example.com/api/webhooks",
-      events: ["payment.succeeded", "refund.succeeded"],
-      status: "ACTIVE",
-      secretMasked: "whsec_99a8...f812",
-    },
-  ]);
-
-  const handleCreateKey = () => {
-    const rawKey = `pr_test_${Math.random().toString(36).substring(2)}${Math.random().toString(36).substring(2)}`;
-    setCreatedPlainKey(rawKey);
-
-    const newKey: ApiKey = {
-      id: `key_${Date.now().toString(36)}`,
-      name: `Automated Key ${apiKeys.length + 1}`,
-      prefix: rawKey.substring(0, 12),
-      scopes: ["payments:read", "payments:write"],
-      createdAt: "Just now",
-    };
-    setApiKeys([newKey, ...apiKeys]);
-  };
-
-  const handleAddEndpoint = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSsrfError(null);
-
-    // SSRF validation simulation
-    const urlLower = endpointUrl.toLowerCase();
-    if (
-      urlLower.includes("localhost") ||
-      urlLower.includes("127.0.0.1") ||
-      urlLower.includes("169.254.169.254") ||
-      urlLower.includes("10.") ||
-      urlLower.includes("192.168.")
-    ) {
-      setSsrfError(
-        "SSRF Security Violation: Outbound webhook endpoints cannot point to loopback, RFC 1918 private subnets, or cloud metadata addresses (169.254.169.254).",
-      );
-      return;
+  const fetchDeveloperData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await fetch("/api/ops/developer");
+      if (!res.ok) {
+        throw new Error(`Developer service returned HTTP ${res.status}`);
+      }
+      const json: DeveloperResponse = await res.json();
+      setApiKeys(json.data?.keys || []);
+      setWebhooks(json.data?.webhooks || []);
+      setDeliveries(json.data?.deliveries || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load developer platform records");
+    } finally {
+      setLoading(false);
     }
-
-    const newEndpoint: WebhookEndpoint = {
-      id: `wh_${Date.now().toString(36)}`,
-      url: endpointUrl,
-      events: ["payment.succeeded", "payment.failed"],
-      status: "ACTIVE",
-      secretMasked: `whsec_${Math.random().toString(36).substring(2, 6)}...${Math.random().toString(36).substring(2, 6)}`,
-    };
-    setWebhooks([newEndpoint, ...webhooks]);
   };
+
+  useEffect(() => {
+    fetchDeveloperData();
+  }, []);
 
   return (
     <div>
       <PageHeader
-        title="Merchant API Platform & Outbound Webhooks"
-        subtitle="Cryptographically hashed API key credentials (SHA-256) and SSRF-hardened HMAC-signed outbound webhooks."
-        actions={
-          <button type="button" className={styles.buttonPrimary} onClick={handleCreateKey}>
-            + Generate New API Key
-          </button>
-        }
+        title="Developer Platform & API Credentials"
+        subtitle="Cryptographically hashed API secrets, scoped permissions, and outward merchant webhook dispatchers with SSRF isolation."
+        actions={<StatusBadge status="SUCCEEDED" customLabel="SHA-256 HASHED SECRETS" />}
       />
 
-      {createdPlainKey && (
-        <div className={styles.card} style={{ border: "1px solid #86efac", background: "#f0fdf4" }}>
-          <div className={styles.cardHeader}>
-            <h2 className={styles.cardTitle} style={{ color: "#166534" }}>
-              🔑 New Merchant API Key Generated
-            </h2>
-            <button
-              type="button"
-              className={styles.buttonSecondary}
-              onClick={() => setCreatedPlainKey(null)}
-            >
-              Dismiss
-            </button>
-          </div>
-          <p style={{ fontSize: "13px", color: "#166534", margin: "0 0 10px 0" }}>
-            Copy this secret key immediately. For PCI and security compliance,{" "}
-            <strong>we never store the plaintext key</strong> in our database (only the SHA-256
-            digest is persisted).
-          </p>
-          <div className={styles.codeBlock} style={{ color: "#86efac", fontWeight: 600 }}>
-            {createdPlainKey}
-          </div>
+      {error && (
+        <div
+          role="alert"
+          style={{
+            padding: "12px 16px",
+            borderRadius: "6px",
+            border: "1px solid #fecaca",
+            background: "#fef2f2",
+            color: "#991b1b",
+            fontSize: "13px",
+            marginBottom: "16px",
+          }}
+        >
+          <strong>Developer Platform Notice:</strong> {error}
         </div>
       )}
 
-      <div className={styles.gridTwoCol}>
-        <div className={styles.card}>
-          <div className={styles.cardHeader}>
-            <h2 className={styles.cardTitle}>Merchant API Keys ({apiKeys.length})</h2>
-            <span className={styles.badgePill}>SHA-256 HASHED STORAGE</span>
-          </div>
-          <div className={styles.tableWrapper}>
-            <table className={styles.table}>
-              <thead>
+      {/* API Keys Table */}
+      <div className={styles.card}>
+        <div className={styles.cardHeader}>
+          <h2 className={styles.cardTitle}>
+            Merchant API Keys (payrail_private.merchant_api_keys)
+          </h2>
+          <span className={styles.badgePill}>SCOPED SECRETS</span>
+        </div>
+
+        <div className={styles.tableWrapper}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th scope="col">Key Name</th>
+                <th scope="col">Prefix</th>
+                <th scope="col">Scopes</th>
+                <th scope="col">Environment</th>
+                <th scope="col">Status</th>
+                <th scope="col">Created</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
                 <tr>
-                  <th scope="col">Name / ID</th>
-                  <th scope="col">Key Prefix</th>
-                  <th scope="col">Scopes</th>
-                  <th scope="col">Status</th>
+                  <td colSpan={6} style={{ padding: "20px" }}>
+                    <Skeleton height="36px" />
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {apiKeys.map((key) => (
+              ) : apiKeys.length > 0 ? (
+                apiKeys.map((key) => (
                   <tr key={key.id}>
                     <td>
-                      <div>
-                        <strong>{key.name}</strong>
-                      </div>
-                      <code style={{ fontSize: "11px", color: "var(--color-text-muted, #64748b)" }}>
-                        {key.id}
-                      </code>
+                      <strong>{key.name}</strong>
                     </td>
                     <td>
-                      <code>{key.prefix}...</code>
+                      <code>{key.keyPrefix}••••••••</code>
                     </td>
                     <td>
                       <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
@@ -165,127 +145,162 @@ export default function DeveloperPlatformPage() {
                       </div>
                     </td>
                     <td>
-                      <StatusBadge status="SUCCEEDED" customLabel="ACTIVE" />
+                      <span className={styles.badgePill}>{key.environment.toUpperCase()}</span>
                     </td>
+                    <td>
+                      <StatusBadge
+                        status={key.revokedAt ? "FAILED" : "SUCCEEDED"}
+                        customLabel={key.revokedAt ? "REVOKED" : "ACTIVE"}
+                      />
+                    </td>
+                    <td>{new Date(key.createdAt).toLocaleString("en-PH")}</td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div className={styles.card}>
-          <div className={styles.cardHeader}>
-            <h2 className={styles.cardTitle}>Register Outbound Webhook</h2>
-            <StatusBadge status="SUCCEEDED" customLabel="SSRF HARDENED" />
-          </div>
-          <form
-            onSubmit={handleAddEndpoint}
-            style={{ display: "flex", flexDirection: "column", gap: "12px" }}
-          >
-            <div>
-              <label
-                htmlFor="endpoint-url-input"
-                style={{
-                  fontSize: "12px",
-                  color: "var(--color-text-secondary, #475569)",
-                  display: "block",
-                  marginBottom: "6px",
-                  fontWeight: 600,
-                }}
-              >
-                HTTPS Webhook Endpoint URL
-              </label>
-              <input
-                id="endpoint-url-input"
-                type="text"
-                className={styles.inputField}
-                value={endpointUrl}
-                onChange={(e) => setEndpointUrl(e.target.value)}
-              />
-            </div>
-            {ssrfError && (
-              <div
-                style={{
-                  background: "#fef2f2",
-                  border: "1px solid #fecaca",
-                  padding: "10px",
-                  borderRadius: "6px",
-                  color: "#991b1b",
-                  fontSize: "12px",
-                }}
-                role="alert"
-              >
-                {ssrfError}
-              </div>
-            )}
-            <button type="submit" className={styles.buttonPrimary}>
-              Register Webhook Endpoint
-            </button>
-          </form>
-
-          <div style={{ marginTop: "16px", borderTop: "1px solid #e2e8f0", paddingTop: "14px" }}>
-            <h3
-              style={{
-                fontSize: "12px",
-                color: "var(--color-text-muted, #64748b)",
-                textTransform: "uppercase",
-                letterSpacing: "0.04em",
-                margin: "0 0 6px 0",
-              }}
-            >
-              Outbound Webhook Signature Scheme
-            </h3>
-            <div className={styles.codeBlock} style={{ fontSize: "11px" }}>
-              {`Header: payrail-signature: t=1729243800,v1=9a8f...4e1b
-Payload: HMAC-SHA256(key=endpoint_secret, data="\${timestamp}.\${raw_body}")`}
-            </div>
-          </div>
+                ))
+              ) : (
+                <tr>
+                  <td
+                    colSpan={6}
+                    style={{ textAlign: "center", padding: "32px", color: "#64748b" }}
+                  >
+                    No API keys registered in database.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
+      {/* Outbound Webhook Subscriptions */}
       <div className={styles.card}>
         <div className={styles.cardHeader}>
           <h2 className={styles.cardTitle}>
-            Configured Webhook Endpoints (payrail_private.merchant_webhook_endpoints)
+            Outbound Webhook Endpoints (payrail_private.merchant_webhook_endpoints)
           </h2>
-          <span className={styles.badgePill}>{webhooks.length} ENDPOINTS</span>
+          <span className={styles.badgePill}>AES-256-GCM SIGNED</span>
         </div>
+
         <div className={styles.tableWrapper}>
           <table className={styles.table}>
             <thead>
               <tr>
-                <th scope="col">Endpoint ID</th>
-                <th scope="col">Target URL</th>
+                <th scope="col">Endpoint URL</th>
                 <th scope="col">Subscribed Events</th>
-                <th scope="col">Signing Secret</th>
                 <th scope="col">Status</th>
+                <th scope="col">Registered</th>
               </tr>
             </thead>
             <tbody>
-              {webhooks.map((wh) => (
-                <tr key={wh.id}>
-                  <td>
-                    <code>{wh.id}</code>
-                  </td>
-                  <td>
-                    <strong>{wh.url}</strong>
-                  </td>
-                  <td>
-                    {wh.events.map((e) => (
-                      <span key={e} className={styles.badgePill} style={{ marginRight: "4px" }}>
-                        {e}
-                      </span>
-                    ))}
-                  </td>
-                  <td>
-                    <code>{wh.secretMasked}</code>
-                  </td>
-                  <td>
-                    <StatusBadge status="SUCCEEDED" customLabel={wh.status} />
+              {loading ? (
+                <tr>
+                  <td colSpan={4} style={{ padding: "20px" }}>
+                    <Skeleton height="36px" />
                   </td>
                 </tr>
-              ))}
+              ) : webhooks.length > 0 ? (
+                webhooks.map((wh) => (
+                  <tr key={wh.id}>
+                    <td>
+                      <code>{wh.url}</code>
+                    </td>
+                    <td>
+                      <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+                        {wh.subscribedEvents.map((evt) => (
+                          <span key={evt} className={styles.badgePill} style={{ fontSize: "10px" }}>
+                            {evt}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td>
+                      <StatusBadge
+                        status={wh.isActive ? "SUCCEEDED" : "FAILED"}
+                        customLabel={wh.isActive ? "ACTIVE" : "DISABLED"}
+                      />
+                    </td>
+                    <td>{new Date(wh.createdAt).toLocaleString("en-PH")}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td
+                    colSpan={4}
+                    style={{ textAlign: "center", padding: "36px 20px", color: "#64748b" }}
+                  >
+                    <div style={{ fontSize: "28px", marginBottom: "8px" }}>🔔</div>
+                    <div style={{ fontWeight: 600, color: "#0f172a", marginBottom: "4px" }}>
+                      No Merchant Webhooks Configured
+                    </div>
+                    <p style={{ margin: 0, fontSize: "12.5px" }}>
+                      Merchant webhook dispatch enforces private subnet filtering (SSRF protection),
+                      HTTPS requirement, and HMAC-SHA256 signature verification.
+                    </p>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Recent Webhook Deliveries */}
+      <div className={styles.card}>
+        <div className={styles.cardHeader}>
+          <h2 className={styles.cardTitle}>
+            Recent Delivery Attempts (payrail_private.merchant_webhook_deliveries)
+          </h2>
+          <span className={styles.badgePill}>DISPATCH AUDIT</span>
+        </div>
+
+        <div className={styles.tableWrapper}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th scope="col">Delivery ID</th>
+                <th scope="col">Event Type</th>
+                <th scope="col">Status</th>
+                <th scope="col">HTTP Code</th>
+                <th scope="col">Attempts</th>
+                <th scope="col">Dispatched At</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={6} style={{ padding: "20px" }}>
+                    <Skeleton height="36px" />
+                  </td>
+                </tr>
+              ) : deliveries.length > 0 ? (
+                deliveries.map((del) => (
+                  <tr key={del.id}>
+                    <td>
+                      <code>{del.id.substring(0, 16)}...</code>
+                    </td>
+                    <td>
+                      <code>{del.eventType}</code>
+                    </td>
+                    <td>
+                      <StatusBadge
+                        status={del.status === "DELIVERED" ? "SUCCEEDED" : "FAILED"}
+                        customLabel={del.status}
+                      />
+                    </td>
+                    <td>{del.statusCode ? <code>{del.statusCode}</code> : "—"}</td>
+                    <td>{del.attemptCount}</td>
+                    <td>{new Date(del.createdAt).toLocaleString("en-PH")}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td
+                    colSpan={6}
+                    style={{ textAlign: "center", padding: "32px", color: "#64748b" }}
+                  >
+                    No outbound webhook deliveries dispatched yet.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
