@@ -1,284 +1,350 @@
 "use client";
 
-import { useState } from "react";
-import { MetricCard, MetricGrid, PageHeader, StatusBadge } from "../../../components/ui";
+import { useEffect, useState } from "react";
+import { MetricCard, MetricGrid, PageHeader, Skeleton, StatusBadge } from "../../../components/ui";
 import styles from "../ops.module.css";
 
-interface DurableJob {
+interface DurableJobRecord {
   id: string;
-  type: string;
-  attempts: number;
+  jobType: string;
+  payload: Record<string, unknown>;
+  state:
+    | "PENDING"
+    | "CLAIMED"
+    | "PROCESSING"
+    | "RETRY_SCHEDULED"
+    | "COMPLETED"
+    | "DEAD_LETTER"
+    | string;
+  attemptCount: number;
   maxAttempts: number;
-  status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
-  leasedBy: string | null;
-  nextRunAt: string;
+  nextAttemptAt: string;
+  lockedBy?: string;
+  createdAt: string;
 }
 
-interface DlqRecord {
+interface DeadLetterRecord {
   id: string;
-  originalJobId: string;
+  jobId: string;
+  merchantId?: string;
   jobType: string;
-  errorTrace: string;
-  payload: string;
-  failedAt: string;
+  payload: Record<string, unknown>;
+  failureReason: string;
+  replayedAt?: string;
+  replayedBy?: string;
+  createdAt: string;
+}
+
+interface JobsResponse {
+  data?: {
+    jobs?: DurableJobRecord[];
+    dlq?: DeadLetterRecord[];
+  };
 }
 
 export default function DurableJobsPage() {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [replayingId, setReplayingId] = useState<string | null>(null);
   const [replayNotice, setReplayNotice] = useState<string | null>(null);
-  const [dlqRecords, setDlqRecords] = useState<DlqRecord[]>([
-    {
-      id: "dlq_0192a001",
-      originalJobId: "job_webhook_9921",
-      jobType: "MERCHANT_WEBHOOK_DISPATCH",
-      errorTrace:
-        "AxiosError: Request failed with status code 500 (Merchant server crashed). Max attempts (5) exhausted.",
-      payload: JSON.stringify(
-        { event: "payment.succeeded", payment_intent_id: "pi_test_0192a831" },
-        null,
-        2,
-      ),
-      failedAt: "Today, 15:45:10",
-    },
-  ]);
+  const [jobs, setJobs] = useState<DurableJobRecord[]>([]);
+  const [dlqRecords, setDlqRecords] = useState<DeadLetterRecord[]>([]);
 
-  const jobs: DurableJob[] = [
-    {
-      id: "job_ledger_8819",
-      type: "LEDGER_JOURNAL_POSTING",
-      attempts: 1,
-      maxAttempts: 3,
-      status: "COMPLETED",
-      leasedBy: "worker_node_01",
-      nextRunAt: "None (Done)",
-    },
-    {
-      id: "job_recon_0012",
-      type: "DAILY_RECONCILIATION_SYNC",
-      attempts: 0,
-      maxAttempts: 3,
-      status: "PENDING",
-      leasedBy: null,
-      nextRunAt: "Tonight, 00:00:00",
-    },
-    {
-      id: "job_webhook_9922",
-      type: "MERCHANT_WEBHOOK_DISPATCH",
-      attempts: 2,
-      maxAttempts: 5,
-      status: "PROCESSING",
-      leasedBy: "worker_node_02 (Lease: 28s remaining)",
-      nextRunAt: "In 12s",
-    },
-  ];
-
-  const handleReplayDlq = (id: string) => {
-    setDlqRecords((prev) => prev.filter((r) => r.id !== id));
-    setReplayNotice(
-      `DLQ Job ${id} safely re-enqueued to active durable jobs with audit log trace.`,
-    );
+  const fetchJobs = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await fetch("/api/ops/jobs");
+      if (!res.ok) {
+        throw new Error(`Jobs service returned HTTP ${res.status}`);
+      }
+      const json: JobsResponse = await res.json();
+      setJobs(json.data?.jobs || []);
+      setDlqRecords(json.data?.dlq || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load durable jobs");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    fetchJobs();
+  }, []);
+
+  const handleReplayDlq = async (id: string) => {
+    try {
+      setReplayingId(id);
+      setReplayNotice(null);
+      setError(null);
+
+      const res = await fetch("/api/ops/jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Replay failed with HTTP ${res.status}`);
+      }
+
+      const json = await res.json();
+      setReplayNotice(
+        `DLQ item ${id} successfully re-enqueued as job ${json.data?.newJobId || "new"}.`,
+      );
+      await fetchJobs();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to replay dead letter item");
+    } finally {
+      setReplayingId(null);
+    }
+  };
+
+  const pendingCount = jobs.filter((j) => j.state === "PENDING" || j.state === "PROCESSING").length;
+  const activeDlqCount = dlqRecords.filter((d) => !d.replayedAt).length;
 
   return (
     <div>
       <PageHeader
-        title="Durable Jobs & Dead Letter Queue (DLQ)"
-        subtitle="PostgreSQL transactional outbox pattern with SELECT FOR UPDATE SKIP LOCKED and worker lease fencing."
-        actions={<StatusBadge status="SUCCEEDED" customLabel="WORKER POOL: 3 NODES ACTIVE" />}
+        title="Durable Background Jobs & Dead Letter Queue"
+        subtitle="At-least-once transactional execution with lease fencing, exponential backoff, and poisoned-pill DLQ quarantine."
+        actions={
+          <StatusBadge
+            status={activeDlqCount === 0 ? "SUCCEEDED" : "FAILED"}
+            customLabel={
+              activeDlqCount === 0
+                ? "DLQ HEALTHY: 0 POISON PILLS"
+                : `DLQ ALERT: ${activeDlqCount} POISON PILLS`
+            }
+          />
+        }
       />
 
       {replayNotice && (
         <div
-          style={{
-            background: "#eff6ff",
-            border: "1px solid #bfdbfe",
-            borderRadius: "8px",
-            padding: "12px 16px",
-            marginBottom: "20px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            fontSize: "13px",
-            color: "#1e40af",
-          }}
           role="status"
+          style={{
+            padding: "12px 16px",
+            borderRadius: "6px",
+            border: "1px solid #bbf7d0",
+            background: "#f0fdf4",
+            color: "#166534",
+            fontSize: "13px",
+            marginBottom: "16px",
+          }}
         >
-          <span>✓ {replayNotice}</span>
-          <button
-            type="button"
-            onClick={() => setReplayNotice(null)}
-            style={{
-              background: "none",
-              border: "none",
-              color: "#1e40af",
-              fontSize: "16px",
-              cursor: "pointer",
-            }}
-            aria-label="Dismiss notice"
-          >
-            ×
-          </button>
+          <strong>DLQ Action:</strong> {replayNotice}
+        </div>
+      )}
+
+      {error && (
+        <div
+          role="alert"
+          style={{
+            padding: "12px 16px",
+            borderRadius: "6px",
+            border: "1px solid #fecaca",
+            background: "#fef2f2",
+            color: "#991b1b",
+            fontSize: "13px",
+            marginBottom: "16px",
+          }}
+        >
+          <strong>Worker Subsystem Warning:</strong> {error}
         </div>
       )}
 
       <MetricGrid>
         <MetricCard
-          label="Active Durable Jobs"
-          value="3 JOBS"
-          metadata="1 Processing · 1 Pending · 1 Completed"
+          label="Active Pending Jobs"
+          value={loading ? <Skeleton height="28px" width="60px" /> : pendingCount}
+          metadata="Leased or waiting in payrail_private.durable_jobs"
         />
         <MetricCard
-          label="Worker Lease Strategy"
-          value={<span style={{ color: "#0f52ba" }}>SKIP LOCKED</span>}
-          metadata="30s Lease TTL · Zero worker collisions"
-        />
-        <MetricCard
-          label="Retry Backoff Model"
-          value={<span style={{ color: "#166534" }}>2^N * 1s + Jitter</span>}
-          metadata="Prevents thundering herd on downstream"
-        />
-        <MetricCard
-          label="Dead Letter Queue"
+          label="Quarantined in DLQ"
           value={
-            <span style={{ color: dlqRecords.length > 0 ? "#dc2626" : "#166534" }}>
-              {dlqRecords.length} QUARANTINED
-            </span>
+            loading ? (
+              <Skeleton height="28px" width="60px" />
+            ) : (
+              <span style={{ color: activeDlqCount === 0 ? "#166534" : "#991b1b" }}>
+                {activeDlqCount}
+              </span>
+            )
           }
-          metadata="Preserves worker queue throughput"
+          metadata="Max attempts exhausted"
+        />
+        <MetricCard
+          label="Total Historical Jobs"
+          value={loading ? <Skeleton height="28px" width="80px" /> : jobs.length}
+          metadata="Across outbox and workers"
+        />
+        <MetricCard
+          label="Worker Queue Health"
+          value={
+            loading ? (
+              <Skeleton height="28px" width="100px" />
+            ) : activeDlqCount === 0 ? (
+              "HEALTHY"
+            ) : (
+              "NEEDS ATTENTION"
+            )
+          }
+          metadata="Lease heartbeat active"
         />
       </MetricGrid>
 
-      {/* Active Jobs Queue */}
+      {/* Dead Letter Queue Section */}
       <div className={styles.card}>
         <div className={styles.cardHeader}>
-          <h2 className={styles.cardTitle}>Durable Jobs Queue (payrail_private.durable_jobs)</h2>
-          <span className={styles.badgePill}>{jobs.length} REGISTERED</span>
+          <h2 className={styles.cardTitle}>
+            Dead Letter Queue (payrail_private.dead_letter_queue)
+          </h2>
+          <span className={styles.badgeDanger}>ISOLATED EXCEPTIONS</span>
         </div>
+
+        <div className={styles.tableWrapper}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th scope="col">DLQ ID</th>
+                <th scope="col">Job Type</th>
+                <th scope="col">Failure Reason</th>
+                <th scope="col">Quarantined At</th>
+                <th scope="col">Status</th>
+                <th scope="col">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={6} style={{ padding: "20px" }}>
+                    <Skeleton height="36px" />
+                  </td>
+                </tr>
+              ) : dlqRecords.length > 0 ? (
+                dlqRecords.map((r) => (
+                  <tr key={r.id}>
+                    <td>
+                      <code>{r.id.substring(0, 16)}...</code>
+                    </td>
+                    <td>
+                      <strong>{r.jobType}</strong>
+                    </td>
+                    <td style={{ maxWidth: "280px" }}>
+                      <span style={{ color: "#991b1b", fontSize: "12px", fontFamily: "monospace" }}>
+                        {r.failureReason}
+                      </span>
+                    </td>
+                    <td>{new Date(r.createdAt).toLocaleString("en-PH")}</td>
+                    <td>
+                      {r.replayedAt ? (
+                        <span className={styles.badgeSuccess}>REPLAYED</span>
+                      ) : (
+                        <span className={styles.badgeDanger}>UNRESOLVED</span>
+                      )}
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className={styles.buttonSecondary}
+                        style={{ fontSize: "11px", padding: "4px 8px" }}
+                        onClick={() => handleReplayDlq(r.id)}
+                        disabled={Boolean(r.replayedAt) || replayingId === r.id}
+                      >
+                        {replayingId === r.id
+                          ? "Replaying..."
+                          : r.replayedAt
+                            ? "Replayed"
+                            : "Replay Job"}
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td
+                    colSpan={6}
+                    style={{ textAlign: "center", padding: "32px", color: "#64748b" }}
+                  >
+                    No dead letter entries quarantined. All durable jobs executed cleanly or remain
+                    in active retry backoff.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Active Durable Jobs Section */}
+      <div className={styles.card}>
+        <div className={styles.cardHeader}>
+          <h2 className={styles.cardTitle}>Durable Job Ledger (payrail_private.durable_jobs)</h2>
+          <span className={styles.badgePill}>TRANSACTIONAL OUTBOX</span>
+        </div>
+
         <div className={styles.tableWrapper}>
           <table className={styles.table}>
             <thead>
               <tr>
                 <th scope="col">Job ID</th>
                 <th scope="col">Type</th>
+                <th scope="col">State</th>
                 <th scope="col">Attempts</th>
-                <th scope="col">Leased Worker</th>
-                <th scope="col">Next Run</th>
-                <th scope="col">Status</th>
+                <th scope="col">Worker Lock</th>
+                <th scope="col">Created</th>
               </tr>
             </thead>
             <tbody>
-              {jobs.map((job) => (
-                <tr key={job.id}>
-                  <td>
-                    <code>{job.id}</code>
-                  </td>
-                  <td>
-                    <strong>{job.type}</strong>
-                  </td>
-                  <td>
-                    {job.attempts} / {job.maxAttempts}
-                  </td>
-                  <td>
-                    {job.leasedBy ? (
-                      <code>{job.leasedBy}</code>
-                    ) : (
-                      <span style={{ color: "var(--color-text-muted, #64748b)" }}>Unassigned</span>
-                    )}
-                  </td>
-                  <td>{job.nextRunAt}</td>
-                  <td>
-                    <StatusBadge
-                      status={
-                        job.status === "COMPLETED"
-                          ? "SUCCEEDED"
-                          : job.status === "PROCESSING"
-                            ? "PROCESSING"
-                            : "AWAITING_PAYMENT"
-                      }
-                      customLabel={job.status}
-                    />
+              {loading ? (
+                <tr>
+                  <td colSpan={6} style={{ padding: "20px" }}>
+                    <Skeleton height="36px" />
                   </td>
                 </tr>
-              ))}
+              ) : jobs.length > 0 ? (
+                jobs.map((j) => (
+                  <tr key={j.id}>
+                    <td>
+                      <code>{j.id.substring(0, 16)}...</code>
+                    </td>
+                    <td>{j.jobType}</td>
+                    <td>
+                      <StatusBadge
+                        status={
+                          j.state === "COMPLETED"
+                            ? "SUCCEEDED"
+                            : j.state === "FAILED"
+                              ? "FAILED"
+                              : "PROCESSING"
+                        }
+                        customLabel={j.state}
+                      />
+                    </td>
+                    <td>{`${j.attemptCount} / ${j.maxAttempts}`}</td>
+                    <td>
+                      {j.lockedBy ? (
+                        <code>{j.lockedBy}</code>
+                      ) : (
+                        <span style={{ color: "#94a3b8" }}>—</span>
+                      )}
+                    </td>
+                    <td>{new Date(j.createdAt).toLocaleTimeString("en-PH")}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td
+                    colSpan={6}
+                    style={{ textAlign: "center", padding: "32px", color: "#64748b" }}
+                  >
+                    No active durable jobs queued in PostgreSQL.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
-      </div>
-
-      {/* Dead Letter Queue */}
-      <div className={styles.card}>
-        <div className={styles.cardHeader}>
-          <h2 className={styles.cardTitle}>
-            Dead Letter Queue (payrail_private.dead_letter_queue)
-          </h2>
-          <span className={dlqRecords.length > 0 ? styles.badgeDanger : styles.badgeSuccess}>
-            {dlqRecords.length} UNRESOLVED
-          </span>
-        </div>
-
-        {dlqRecords.length > 0 ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            {dlqRecords.map((item) => (
-              <div
-                key={item.id}
-                style={{
-                  background: "#fef2f2",
-                  border: "1px solid #fecaca",
-                  borderRadius: "8px",
-                  padding: "16px",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: "10px",
-                    flexWrap: "wrap",
-                    gap: "8px",
-                  }}
-                >
-                  <div>
-                    <span className={styles.badgeDanger}>{item.id}</span>
-                    <strong style={{ marginLeft: "10px", color: "#991b1b" }}>{item.jobType}</strong>
-                    <span style={{ fontSize: "12px", color: "#64748b", marginLeft: "10px" }}>
-                      {item.failedAt}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    className={styles.buttonPrimary}
-                    onClick={() => handleReplayDlq(item.id)}
-                  >
-                    Replay Job
-                  </button>
-                </div>
-                <div
-                  style={{
-                    color: "#991b1b",
-                    fontSize: "13px",
-                    marginBottom: "8px",
-                    fontWeight: 500,
-                  }}
-                >
-                  {item.errorTrace}
-                </div>
-                <div className={styles.codeBlock} style={{ fontSize: "11px" }}>
-                  {item.payload}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "32px",
-              color: "var(--color-text-muted, #64748b)",
-            }}
-          >
-            No quarantined jobs in Dead Letter Queue. Worker pipeline running at 100% capacity.
-          </div>
-        )}
       </div>
     </div>
   );

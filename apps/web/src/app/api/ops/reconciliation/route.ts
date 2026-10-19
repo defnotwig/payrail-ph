@@ -1,0 +1,99 @@
+import { type NextRequest, NextResponse } from "next/server";
+
+export async function GET(request: NextRequest) {
+  try {
+    const apiBase = (
+      process.env.INTERNAL_API_URL ||
+      process.env.API_BASE_URL ||
+      process.env.NEXT_PUBLIC_API_BASE_URL ||
+      "http://127.0.0.1:4000"
+    ).replace(/\/+$/, "");
+
+    const apiKey =
+      process.env.DEMO_MERCHANT_API_KEY || "sk_test_payrail_demo_merchant_default_9f8e7d6c5b4a";
+
+    const requestId =
+      request.headers.get("x-request-id") ||
+      request.headers.get("x-correlation-id") ||
+      crypto.randomUUID();
+
+    const response = await fetch(`${apiBase}/ops/reconciliation`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        "X-API-Key": apiKey,
+        "X-Request-Id": requestId,
+        "X-Correlation-Id": requestId,
+      },
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    return NextResponse.json(data, {
+      status: response.status,
+      headers: {
+        "x-request-id": requestId,
+        "x-correlation-id": requestId,
+      },
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to communicate with reconciliation service";
+    return NextResponse.json(
+      {
+        message: "We couldn't reach the reconciliation operations service.",
+        detail: message,
+      },
+      { status: 502 },
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const apiBase = (
+      process.env.INTERNAL_API_URL ||
+      process.env.API_BASE_URL ||
+      process.env.NEXT_PUBLIC_API_BASE_URL ||
+      "http://127.0.0.1:4000"
+    ).replace(/\/+$/, "");
+
+    const apiKey =
+      process.env.DEMO_MERCHANT_API_KEY || "sk_test_payrail_demo_merchant_default_9f8e7d6c5b4a";
+
+    const requestId =
+      request.headers.get("x-request-id") ||
+      request.headers.get("x-correlation-id") ||
+      crypto.randomUUID();
+
+    const response = await fetch(`${apiBase}/ops/reconciliation/run`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        "X-API-Key": apiKey,
+        "X-Request-Id": requestId,
+        "X-Correlation-Id": requestId,
+      },
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    return NextResponse.json(data, {
+      status: response.status,
+      headers: {
+        "x-request-id": requestId,
+        "x-correlation-id": requestId,
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to execute reconciliation";
+    return NextResponse.json(
+      {
+        message: "We couldn't execute the reconciliation run.",
+        detail: message,
+      },
+      { status: 502 },
+    );
+  }
+}

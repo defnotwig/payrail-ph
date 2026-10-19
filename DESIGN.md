@@ -1,138 +1,146 @@
-# PayRail PH — Design System & Visual Philosophy (V2)
+# PayRail PH — Operations Experience V3 Design System (DESIGN.md)
 
-**Version:** 2.0.0  
-**Target:** High-Precision Financial Infrastructure & Payment Orchestration  
-**Influences:** Stripe, Wise Business, Mercury, Ramp, PayMongo, BSP QR Ph Standards  
+**Version:** 3.0.0  
+**Project Classification:** Philippine Financial Infrastructure & Payment Orchestration  
+**Stitch MCP Project:** `https://stitch.google.com/projects/9384472954066961863` (PayRail PH — Operations V3)  
+**Influences:** Stripe Dashboard & Developer Tools, Mercury, Modern Treasury, BSP QR Ph Standards  
 
 ---
 
-## 1. Core Visual Philosophy
+## 1. Executive Summary & Visual Philosophy
 
-PayRail PH is an operational fintech platform. It is engineered to look and feel like critical banking infrastructure: **trustworthy, precise, fast, calm, human-designed, and authoritative.**
+PayRail PH is critical Philippine payment orchestration infrastructure. The V3 Operations Experience is engineered to be **precise, trustworthy, quiet, information-dense, and operationally authoritative**.
 
 It is deliberately NOT:
-- A generic AI-generated SaaS landing page
-- A crypto, web3, or DeFi dashboard
-- A gaming or neon cyberpunk interface
-- A decorative template with floating 3D objects and glassmorphic blur
+- A Stripe clone or generic shadcn admin template
+- A generic AI SaaS with glowing gradients and glassmorphism
+- A crypto dashboard with dark neon accents
+- A prototype with fabricated numbers and fake transaction rows
+
+Every single metric, latency figure, and row in the operations console is derived from **actual persisted PostgreSQL application data**, or displays an honest empty state (`—` or `No activity yet`).
 
 ---
 
-## 2. Anti-AI-Slop Rulebook
+## 2. Google Stitch MCP Divergent Exploration & Convergence
 
-Every interface component and layout must adhere to these prohibitions:
+We explored three distinct structural paradigms generated via Google Stitch MCP (`project/9384472954066961863`):
 
-1. **NO Generic Gradient Blobs & Mesh Backgrounds:** No floating blurred colored circles, cosmic backgrounds, or iridescent mesh wallpapers.
-2. **NO Cyberpunk / Neon Accents:** No neon cyan, magenta, or electric purple text/borders.
-3. **NO Excessive Backdrop Blur / Glassmorphism Everywhere:** Surfaces must have clear, solid physical contrast and containment.
-4. **NO Random 3D Illustrations & Floating Credit Cards:** No decorative isometric floating bank cards, coins, robots, or rocket ships.
-5. **NO 4-Equal-KPI-Card Syndrome:** Do not blindly stamp four identical metric cards on every page. Highlight only 2–3 high-priority operational metrics.
-6. **NO Pill Explosion:** Do not turn every noun, label, or date into a rounded pill. Use clean typographic metadata. Full rounded capsules (`border-radius: 9999px`) are reserved strictly for operational status badges.
-7. **NO Giant Inefficient Hero Sections:** The value proposition and interactive working product must be visible above the fold.
-8. **NO Meaningless Animation or Physics Gimmicks:** No draggable canvas physics (no Matter.js), springy financial balances, or rotating elements. Motion must be subtle (<200ms) and communicate state changes only.
-9. **NO Fake Testimonials, Bank Logos, or Decorative Numbers:** Every metric, transaction, and status shown must be mathematically and operationally truthful.
+| Aspect | Concept A: Financial Operations First | Concept B: Modern Infrastructure Console | Concept C: Financial Control Center |
+|---|---|---|---|
+| **Core Influence** | Stripe Dashboard | Stripe Developer Tools + Datadog | Modern Treasury / Mercury |
+| **Primary Mental Model** | Transaction lifecycle as centerpiece | Command-first split investigation console | Balance sheet & settlement batches |
+| **Navigation** | 240px collapsible left sidebar | Command bar (`Cmd+K`) + minimal dock | Horizontal tabs + activity feed |
+| **Data Density** | Very High (40px compact table rows) | High (split 60/40 forensic split pane) | Moderate (card-based settlement blocks) |
+| **Exception Visibility**| Dedicated Needs Attention triage queue | Event stream anomaly markers | Reconcile drawer |
+| **Mobile Adaptability** | Converts to navigation drawer + cards | Dense; requires desktop viewport | Stacks into financial stream |
 
----
-
-## 3. Design Tokens & Palette
-
-### 3.1 Color Palette
-A light-first, high-legibility operational aesthetic with high-contrast functional hierarchy:
-
-* **Foundation Canvas (`--bg-canvas`):** `#f8fafc` (Slate 50) — A calm, clean, low-glare canvas.
-* **Surface Default (`--bg-surface`):** `#ffffff` (Pure White) — Crisp containment for cards, tables, and dialogs.
-* **Surface Subtle (`--bg-subtle`):** `#f1f5f9` (Slate 100) — Inset trays, table header rows, code backgrounds.
-* **Text Primary (`--text-primary`):** `#0f172a` (Slate 900) — Dominant high-contrast text (>14:1 contrast ratio).
-* **Text Secondary (`--text-secondary`):** `#475569` (Slate 600) — Form labels, column headers, metadata (>5.5:1 ratio).
-* **Text Muted (`--text-muted`):** `#94a3b8` (Slate 400) — Disabled states, subtle hints.
-* **Borders & Dividers (`--border-subtle`):** `#e2e8f0` (Slate 200) — Sharp, 1px structural boundaries.
-* **Brand Accent (`--brand-primary`):** `#0f52ba` (Sapphire Cobalt) — High-trust financial anchor for primary actions.
-* **Brand Accent Hover (`--brand-hover`):** `#0c4196` (Deep Sapphire).
-
-### 3.2 Semantic State Tokens
-Restricted strictly to meaningful operational states:
-* **Success / Terminal Succeeded:**
-  * Background: `#ecfdf5` (Emerald 50) | Text: `#065f46` (Emerald 800) | Border: `#a7f3d0` (Emerald 200)
-* **Processing / Awaiting Payment:**
-  * Background: `#fffbeb` (Amber 50) | Text: `#92400e` (Amber 800) | Border: `#fde68a` (Amber 200)
-* **Failed / Terminal Failure:**
-  * Background: `#fef2f2` (Rose 50) | Text: `#991b1b` (Rose 800) | Border: `#fecdd3` (Rose 200)
-* **Unknown / Reconciliation Required:**
-  * Background: `#f8fafc` (Slate 50) | Text: `#334155` (Slate 700) | Border: `#cbd5e1` (Slate 300)
-* **Sandbox / Environment Badge:**
-  * Background: `#fef3c7` (Amber 100) | Text: `#78350f` (Amber 900) | Border: `#fcd34d` (Amber 300)
+### Convergence Decision: The Operations Console Standard
+We converged on a synthesis of **Concept A** (navigation, high-density tables, Needs Attention queue) and **Concept B** (global command bar, split forensic inspection workstation for payment details, correlation tracking):
+- **Desktop:** 240px collapsible left sidebar with grouped hierarchy, quiet top utility bar with `/` global search and global environment indicator, 4-metric real KPI performance strip, and deep 6-tab forensic transaction workstation.
+- **Tablet (768px–1024px):** Compact 64px sidebar dock, horizontally scrollable data tables with fixed column headers.
+- **Mobile (<768px):** Navigation drawer, full-width touch targets (44px+), responsive stacked transaction cards with clear state indicators.
 
 ---
 
-## 4. Typography & Tabular Figures
+## 3. Laws of UX Applied
 
-* **Primary Font Family:** System UI Sans / `Inter`, `-apple-system`, `BlinkMacSystemFont`, `Segoe UI`, `Roboto`, sans-serif.
-* **Tabular Figures (`tnum`):** Enforced globally on all financial numbers, minor-unit amounts, timestamps, transaction references, latencies, and ledger lines:
-  ```css
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum" 1;
-  ```
-* **Scale Rhythm:**
-  * `display`: 2rem (32px) / line-height 1.25 / font-weight 700 / letter-spacing -0.02em
-  * `h1`: 1.5rem (24px) / line-height 1.3 / font-weight 700 / letter-spacing -0.015em
-  * `h2`: 1.25rem (20px) / line-height 1.35 / font-weight 600 / letter-spacing -0.01em
-  * `h3`: 1rem (16px) / line-height 1.4 / font-weight 600
-  * `body`: 0.875rem (14px) / line-height 1.5 / font-weight 400
-  * `body-sm`: 0.75rem (12px) / line-height 1.4 / font-weight 400
-  * `caption`: 0.6875rem (11px) / line-height 1.3 / font-weight 600 / uppercase / letter-spacing 0.05em
-
----
-
-## 5. Spacing, Shapes & Elevation
-
-* **Base Grid:** 4px baseline.
-  * `space-1`: 4px (micro adjustments, badge insets)
-  * `space-2`: 8px (component gaps, button padding)
-  * `space-3`: 12px (form control gaps, tight lists)
-  * `space-4`: 16px (card padding, table cells)
-  * `space-6`: 24px (card padding on desktop, section breaks)
-  * `space-8`: 32px (major layout blocks)
-* **Corner Radius:**
-  * `radius-sm`: 4px (micro badges, code tags)
-  * `radius-md`: 6px (buttons, inputs, select menus)
-  * `radius-lg`: 10px (standard cards, modal dialogs)
-  * `radius-full`: 9999px (strictly for status pill indicators)
-* **Elevation & Shadows:**
-  * `shadow-none`: flat borders only (default for most internal operational tables)
-  * `shadow-sm`: `0 1px 2px 0 rgba(0, 0, 0, 0.05)` (cards, active containers)
-  * `shadow-md`: `0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05)` (modals, dropdowns)
+1. **Jakob's Law (Familiar Mental Models):**
+   - Left sidebar with predictable groupings.
+   - Global search accessible via keyboard shortcut `/` or `Ctrl+K`.
+   - Familiar status pill badges, standard data tables, and tabbed detail inspectors.
+2. **Hick's Law (Reduced Cognitive Load):**
+   - Replaced flat 11-item top navigation with structured, collapsible groups:
+     - **HOME:** Overview
+     - **PAYMENTS:** Payments, Refunds, Reconciliation
+     - **MONEY:** Ledger
+     - **DEVELOPERS:** Webhooks, API Logs, API Keys, API Docs
+     - **RELIABILITY:** System Health, Provider Health, Jobs & DLQ, Reliability Lab
+     - **SECURITY:** Audit, Access
+     - **LABS:** Cards & 3DS, ISO 8583
+     - **SETTINGS:** Settings
+3. **Tesler's Law (Conservation of Complexity):**
+   - The system absorbs complexity. Raw provider payloads, signature HMAC hashes, and internal attempt IDs are tucked behind progressive disclosure (expandable JSON viewers and inspection tabs).
+4. **Fitts's Law (Action Target Sizing):**
+   - Primary operational actions (`Generate QR`, `Simulate test payment`, `Replay webhook`, `Retry job`) have large, unambiguous target sizes (minimum 44px on mobile, 36px on desktop).
+   - Destructive actions (refunds, cancellations) are visually isolated and never adjacent to primary triggers.
+5. **Law of Proximity & Common Region:**
+   - Group related financial information (Amount, Status, Provider, Order Number) into cohesive visual blocks using whitespace and subtle borders rather than nested cards.
+6. **Von Restorff Effect (Isolation Effect):**
+   - Only one primary action button per surface.
+   - Healthy operations remain visually quiet and neutral; exceptions in Needs Attention (`UNKNOWN_REQUIRES_RECONCILIATION`, failed webhooks, DLQ items) stand out with amber/rose accenting.
+7. **Doherty Threshold (Instant Feedback):**
+   - Micro-feedback in <150ms.
+   - Optimistic states, loading spinners, and skeleton loaders for async operations exceeding 200ms. Zero frozen buttons.
 
 ---
 
-## 6. Financial UX Laws
+## 4. Anti-AI-Slop Rulebook
 
-1. **Information Hierarchy:**
-   1. `#1 Amount` (prominent, high-contrast, tabular numerals, currency symbol aligned)
-   2. `#2 State` (clear, color-coded, human readable: "Payment confirmed", "Awaiting payment")
-   3. `#3 Counterparty / Order Reference`
-   4. `#4 Payment Method` (QR Ph, Card)
-   5. `#5 Date & Timestamp` (ISO 8601 formatted clearly in local time)
-   6. `#6 Transaction Reference` (copyable with one click)
-   7. `#7 Technical Metadata` (expandable in progressive disclosure)
-2. **Amount Alignment:**
-   * In all data tables, numbers and currency amounts **MUST BE RIGHT-ALIGNED**.
-   * Text and statuses must be left-aligned.
-3. **No Ambiguous Errors:**
-   * Never say "Something went wrong". Specify whether the payment failed, whether the provider timed out, and whether the card was charged or not.
-   * If state is `UNKNOWN_REQUIRES_RECONCILIATION`: explicitly instruct "We are verifying this transaction. Do not submit a duplicate payment."
-4. **QR Ph Sandbox Safety:**
-   * Prominently display: "TEST MODE — Do not scan this test QR with your real banking or e-wallet application."
-   * Always provide the official PayMongo `test_url` via a clear "Simulate ₱1 Payment" button.
-5. **Calm Receipts:**
-   * Success receipts must feel settled and definitive. Clean checkmark, clear metadata breakdown, print/download receipt action, and option to make another test payment.
+Every screen must strictly enforce:
+1. **NO 12-Card Overload:** Never place dozens of equal-weight KPI cards on a page. Exactly 4 core operational metrics on Overview.
+2. **NO Cards Inside Cards Inside Cards:** Max 1 level of card elevation above the canvas.
+3. **NO Decorative Gradients or Glows:** No purple/cyan gradient text, glowing neon border pulses, or floating 3D coins/cards.
+4. **NO Fabricated Numbers:** Remove static strings like `99.8%`, `₱184,500`, `185ms`, `369 transactions`. If no data exists, display `—` or `No activity yet`.
+5. **NO Merged Fake Rows:** Never mix `sessionStorage` demo items into the authoritative database tables.
+6. **NO Generic Centering:** Tables and data views must be left-aligned for text/status and strictly **right-aligned for numerical currency amounts**.
 
 ---
 
-## 7. Accessibility Standards (WCAG 2.2 AA)
+## 5. Design Tokens & Visual Hierarchy
 
-* Minimum contrast of 4.5:1 for standard text and 3:1 for large text/icons.
-* Minimum interactive touch target of 44×44px on mobile viewports.
-* Clear `:focus-visible` outline (`2px solid #0f52ba`, `offset 2px`).
-* `aria-live="polite"` on dynamic payment status updates.
-* Full keyboard navigation (Tab, Enter, Space, Escape on dialogs).
-* Complete support for `prefers-reduced-motion`.
+### 5.1 Color Palette
+A light-first, clinical slate foundation:
+- **Canvas Base (`--bg-canvas`):** `#f8fafc` (Slate 50)
+- **Surface Default (`--bg-surface`):** `#ffffff` (Pure White)
+- **Surface Subtle (`--bg-subtle`):** `#f1f5f9` (Slate 100) — Inset trays, table headers
+- **Surface Hover (`--bg-hover`):** `#f8fafc` (Slate 50)
+- **Text Primary (`--text-primary`):** `#0f172a` (Slate 900) — Dominant text (>14:1 contrast ratio)
+- **Text Secondary (`--text-secondary`):** `#475569` (Slate 600) — Labels, headers, metadata (>5.5:1 ratio)
+- **Text Muted (`--text-muted`):** `#94a3b8` (Slate 400) — Placeholders, disabled text
+- **Borders (`--border-subtle`):** `#e2e8f0` (Slate 200) — 1px crisp separation
+- **Structural Borders (`--border-strong`):** `#cbd5e1` (Slate 300) — Active inputs, selected tabs
+- **Brand Primary (`--brand-primary`):** `#0f52ba` (Sapphire Cobalt) — High-trust financial anchor
+- **Brand Hover (`--brand-hover`):** `#0c4196`
+
+### 5.2 Functional Status Tokens
+- **`SUCCEEDED` / `SETTLED`:** Text `#047857`, Surface `#ecfdf5`, Border `#a7f3d0`
+- **`AWAITING_PAYMENT` / `PROCESSING`:** Text `#b45309`, Surface `#fffbeb`, Border `#fde68a`
+- **`FAILED` / `EXPIRED`:** Text `#be123c`, Surface `#fff1f2`, Border `#fecdd3`
+- **`UNKNOWN_REQUIRES_RECONCILIATION`:** Text `#4338ca`, Surface `#eef2ff`, Border `#c7d2fe`
+- **Environment Indicator:**
+  - Sandbox: Text `#78350f`, Surface `#fef3c7`, Border `#fcd34d`
+  - Live: Reserved for future production with red/crimson containment
+
+### 5.3 Typography Scale
+- **Display / Page Header:** 24px–28px / font-weight 700 / letter-spacing -0.02em
+- **Section Title:** 16px–18px / font-weight 600
+- **Body / Table Content:** 13px–14px / font-weight 400 / line-height 20px
+- **Caption / Meta:** 11px–12px / font-weight 500 / letter-spacing 0.02em
+- **Tabular Numerals (`JetBrains Mono` / `tnum`):** Enforced on all Philippine Peso amounts (`₱1.00`), timestamps, transaction hashes, latencies, and ledger lines.
+
+---
+
+## 6. QR Ph Checkout Dialog Architecture
+
+1. **Trigger:** Simple card at `/demo/qrph` with preset ₱1.00 and single button `[ Generate QR Ph ]`.
+2. **Accessible Dialog:** Opens centered modal (540px desktop) or bottom sheet (mobile). Focus is trapped inside the dialog. `aria-modal="true"`, `role="dialog"`.
+3. **Unaltered Provider QR:** Renders the exact PayMongo `next_action.code.image_url` output without cropping, recoloring, or artificial center logos.
+4. **Authoritative Expiration:** Dynamic 30-minute countdown derived from creation timestamp.
+5. **Sandbox Safety:**
+   - Prominent banner: *"TEST MODE — Do not pay this test QR using a real banking or e-wallet application."*
+   - Primary simulator action: `[ Simulate ₱1 payment ]` opening PayMongo `test_url`.
+   - Phone simulator shortcut: Collapsible secondary section labeled *"TEST SIMULATOR QR"* encoding ONLY `test_url`.
+6. **Automatic Polling & Calm Success:**
+   - Polls `/api/payments/[id]` every 2s until `SUCCEEDED`.
+   - Transitions to settled receipt: *"Payment successful"*, ₱1.00, reference, timestamp, `[ View in Operator Dashboard ]`, `[ Make another payment ]`. No confetti, no fireworks.
+
+---
+
+## 7. Component Library Manifest
+
+- **Navigation:** `AppShell`, `Sidebar`, `CommandBar`, `PageHeader`, `NavGroup`, `NavItem`
+- **Status & Indicators:** `EnvironmentIndicator`, `HealthIndicator`, `StatusBadge`, `ProviderBadge`
+- **Data Display:** `DataTable`, `FilterBar`, `SearchInput`, `Amount`, `Timeline`, `ActivityFeed`, `DefinitionList`
+- **Metrics:** `MetricCard`, `MetricGrid`
+- **Containers:** `Dialog`, `Drawer`, `Tabs`, `DetailSection`, `EmptyState`, `ErrorState`, `Skeleton`
+- **Diagnostics:** `CodeBlock`, `JsonViewer`

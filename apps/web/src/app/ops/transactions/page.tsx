@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
-import { Amount, DetailList, PageHeader, StatusBadge } from "../../../components/ui";
+import { useSearchParams } from "next/navigation";
+import { Amount, DetailList, PageHeader, Skeleton, StatusBadge } from "../../../components/ui";
 import styles from "../ops.module.css";
 
 interface Transaction {
@@ -10,142 +11,96 @@ interface Transaction {
   orderNumber: string;
   amountMinor: number;
   method: "qrph" | "card";
-  state: "SUCCEEDED" | "AWAITING_PAYMENT" | "FAILED" | "REFUNDED" | "PROCESSING" | "EXPIRED";
+  state:
+    | "SUCCEEDED"
+    | "AWAITING_PAYMENT"
+    | "FAILED"
+    | "REFUNDED"
+    | "PROCESSING"
+    | "EXPIRED"
+    | string;
   provider: string;
   idempotencyKey: string;
   providerEventId: string;
   createdAt: string;
 }
 
-const DEFAULT_TRANSACTIONS: Transaction[] = [
-  {
-    id: "pi_test_0192a831001",
-    orderNumber: "ORD-20261018-01",
-    amountMinor: 50000,
-    method: "qrph",
-    state: "SUCCEEDED",
-    provider: "PayMongo Test",
-    idempotencyKey: "idem_order_01_99182a",
-    providerEventId: "evt_paymongo_0192a831",
-    createdAt: "Today, 17:15:20",
-  },
-  {
-    id: "pi_test_0192a832002",
-    orderNumber: "ORD-20261018-02",
-    amountMinor: 125000,
-    method: "card",
-    state: "SUCCEEDED",
-    provider: "PayMongo Test",
-    idempotencyKey: "idem_order_02_44192b",
-    providerEventId: "evt_paymongo_0192a832",
-    createdAt: "Today, 16:50:11",
-  },
-  {
-    id: "pi_test_0192a833003",
-    orderNumber: "ORD-20261018-03",
-    amountMinor: 30000,
-    method: "qrph",
-    state: "AWAITING_PAYMENT",
-    provider: "PayMongo Test",
-    idempotencyKey: "idem_order_03_77182c",
-    providerEventId: "evt_pending_qr_scan",
-    createdAt: "Today, 16:42:00",
-  },
-  {
-    id: "pi_test_0192a834004",
-    orderNumber: "ORD-20261018-04",
-    amountMinor: 89000,
-    method: "card",
-    state: "FAILED",
-    provider: "PayMongo Test",
-    idempotencyKey: "idem_order_04_33192d",
-    providerEventId: "evt_card_declined_51",
-    createdAt: "Today, 15:30:18",
-  },
-];
+function TransactionsContent() {
+  const searchParams = useSearchParams();
+  const searchFromUrl = searchParams.get("search") || "";
 
-export default function TransactionsPage() {
-  const [transactions, setTransactions] = useState<Transaction[]>(DEFAULT_TRANSACTIONS);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [filterState, setFilterState] = useState<string>("ALL");
+  const [searchTerm, setSearchTerm] = useState<string>(searchFromUrl);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
-      const mergedMap = new Map<string, Transaction>();
-
-      // 1. Seed defaults
-      for (const t of DEFAULT_TRANSACTIONS) {
-        mergedMap.set(t.id, t);
-      }
-
-      // 2. Fetch live transactions from backend if available
+      setLoading(true);
       try {
         const res = await fetch("/api/payments");
         if (res.ok) {
           const json = await res.json();
           const items = Array.isArray(json) ? json : json.data;
           if (Array.isArray(items)) {
-            for (const item of items) {
-              mergedMap.set(item.id, {
-                id: item.id,
-                orderNumber: item.orderNumber || `ORD-${item.id.substring(0, 8)}`,
-                amountMinor: Number(item.amountMinor) || 100,
-                method: (item.paymentMethod === "card" ? "card" : "qrph") as "qrph" | "card",
-                state: item.state || "SUCCEEDED",
-                provider: "PayMongo Test",
-                idempotencyKey: item.idempotencyKey || `idem_${item.id.substring(0, 8)}`,
-                providerEventId: item.providerPaymentIntentId || `evt_${item.id.substring(0, 8)}`,
-                createdAt: item.createdAt
-                  ? new Date(item.createdAt).toLocaleTimeString()
+            const list: Transaction[] = items.map((item: Record<string, unknown>) => {
+              const id = String(item["id"] ?? "");
+              const createdAt = typeof item["createdAt"] === "string" ? item["createdAt"] : "";
+              return {
+                id,
+                orderNumber:
+                  typeof item["orderNumber"] === "string"
+                    ? item["orderNumber"]
+                    : `ORD-${id.substring(0, 8)}`,
+                amountMinor: Number(item["amountMinor"]) || 100,
+                method: (item["paymentMethod"] === "card" ? "card" : "qrph") as "qrph" | "card",
+                state: typeof item["state"] === "string" ? item["state"] : "SUCCEEDED",
+                provider: typeof item["provider"] === "string" ? item["provider"] : "PayMongo Test",
+                idempotencyKey:
+                  typeof item["idempotencyKey"] === "string"
+                    ? item["idempotencyKey"]
+                    : `idem_${id.substring(0, 8)}`,
+                providerEventId:
+                  typeof item["providerPaymentIntentId"] === "string"
+                    ? item["providerPaymentIntentId"]
+                    : `evt_${id.substring(0, 8)}`,
+                createdAt: createdAt
+                  ? new Date(createdAt).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      second: "2-digit",
+                    })
                   : "Just now",
-              });
+              };
+            });
+            setTransactions(list);
+            const first = list[0];
+            if (first && !selectedTx) {
+              setSelectedTx(first);
             }
           }
         }
       } catch {
-        // Backend offline or unreachable
+        // Backend offline
+      } finally {
+        setLoading(false);
       }
-
-      // 3. Merge locally recorded demo transactions from sessionStorage
-      try {
-        const raw = sessionStorage.getItem("payrail_recorded_transactions");
-        if (raw) {
-          const list = JSON.parse(raw);
-          if (Array.isArray(list)) {
-            for (const item of list) {
-              if (item?.id) {
-                mergedMap.set(item.id, {
-                  id: item.id,
-                  orderNumber: item.orderNumber || `ORD-${item.id.substring(0, 8)}`,
-                  amountMinor: Number(item.amountMinor) || 100,
-                  method: "qrph",
-                  state: item.state || "SUCCEEDED",
-                  provider: "PayMongo Test",
-                  idempotencyKey: `idem_${item.id.substring(0, 8)}`,
-                  providerEventId: item.providerPaymentIntentId || `evt_${item.id.substring(0, 8)}`,
-                  createdAt: item.createdAt
-                    ? new Date(item.createdAt).toLocaleTimeString()
-                    : "Just now",
-                });
-              }
-            }
-          }
-        }
-      } catch {
-        // session storage unavailable
-      }
-
-      const list = Array.from(mergedMap.values());
-      setTransactions(list);
     }
 
     loadData();
   }, []);
 
-  const filtered = transactions.filter((t) =>
-    filterState === "ALL" ? true : t.state === filterState,
-  );
+  const filtered = transactions.filter((t) => {
+    const matchesState = filterState === "ALL" ? true : t.state === filterState;
+    const matchesSearch =
+      searchTerm.trim() === ""
+        ? true
+        : t.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          t.orderNumber.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesState && matchesSearch;
+  });
 
   const handleSimulateRefund = (tx: Transaction) => {
     setActionNotice(
@@ -165,7 +120,16 @@ export default function TransactionsPage() {
         title="Transaction Investigation & Payment Intents"
         subtitle="Progressive disclosure of payment lifecycle, idempotency records, and verified provider evidence."
         actions={
-          <div className={styles.flexRow}>
+          <div className={styles.flexRow} style={{ flexWrap: "wrap", gap: "8px" }}>
+            <input
+              type="search"
+              placeholder="Filter by ID or reference..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className={styles.inputField}
+              style={{ width: "220px", fontSize: "12px", padding: "6px 10px" }}
+              aria-label="Filter transactions"
+            />
             <label
               htmlFor="filter-state-select"
               style={{
@@ -174,14 +138,14 @@ export default function TransactionsPage() {
                 fontWeight: 600,
               }}
             >
-              Filter by State:
+              State:
             </label>
             <select
               id="filter-state-select"
               className={styles.inputField}
               value={filterState}
               onChange={(e) => setFilterState(e.target.value)}
-              style={{ width: "auto" }}
+              style={{ width: "auto", fontSize: "12px", padding: "6px 10px" }}
             >
               <option value="ALL">All States ({transactions.length})</option>
               <option value="SUCCEEDED">Succeeded</option>
@@ -219,7 +183,8 @@ export default function TransactionsPage() {
               color: "#1e40af",
               fontSize: "16px",
               cursor: "pointer",
-              padding: "0 4px",
+              padding: "4px 8px",
+              minHeight: "36px",
             }}
             aria-label="Dismiss notice"
           >
@@ -240,7 +205,9 @@ export default function TransactionsPage() {
               <thead>
                 <tr>
                   <th scope="col">Status</th>
-                  <th scope="col">Amount</th>
+                  <th scope="col" style={{ textAlign: "right" }}>
+                    Amount
+                  </th>
                   <th scope="col">Reference</th>
                   <th scope="col">Method</th>
                   <th scope="col">Provider</th>
@@ -249,76 +216,115 @@ export default function TransactionsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((tx) => {
-                  const isSelected = selectedTx?.id === tx.id;
-                  return (
-                    <tr
-                      key={tx.id}
-                      style={{
-                        background: isSelected ? "#eff6ff" : undefined,
-                        cursor: "pointer",
-                      }}
-                      onClick={() => setSelectedTx(tx)}
-                    >
-                      <td>
-                        <StatusBadge status={tx.state} />
-                      </td>
-                      <td className={styles.numCol}>
-                        <Amount amountMinor={tx.amountMinor} currency="PHP" align="right" />
-                      </td>
-                      <td>
-                        <div
-                          style={{ fontWeight: 600, color: "var(--color-text-primary, #0f172a)" }}
-                        >
-                          {tx.orderNumber}
-                        </div>
-                        <code
-                          style={{ fontSize: "11px", color: "var(--color-text-muted, #64748b)" }}
-                        >
-                          {tx.id}
-                        </code>
-                      </td>
-                      <td>
-                        <span className={styles.badgePill}>{tx.method.toUpperCase()}</span>
-                      </td>
-                      <td>
-                        <span style={{ fontSize: "12px", color: "#475569" }}>{tx.provider}</span>
-                      </td>
-                      <td>
-                        <span style={{ fontSize: "12px", color: "#64748b" }}>{tx.createdAt}</span>
-                      </td>
-                      <td>
-                        <div style={{ display: "flex", gap: "6px" }}>
-                          <button
-                            type="button"
-                            className={styles.buttonSecondary}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedTx(tx);
-                            }}
-                            style={{ padding: "4px 8px", fontSize: "11px" }}
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} style={{ padding: "20px" }}>
+                      <Skeleton height="24px" style={{ marginBottom: "8px" }} />
+                      <Skeleton height="24px" style={{ marginBottom: "8px" }} />
+                      <Skeleton height="24px" />
+                    </td>
+                  </tr>
+                ) : filtered.length > 0 ? (
+                  filtered.map((tx) => {
+                    const isSelected = selectedTx?.id === tx.id;
+                    return (
+                      <tr
+                        key={tx.id}
+                        tabIndex={0}
+                        aria-selected={isSelected}
+                        style={{
+                          background: isSelected ? "#eff6ff" : undefined,
+                          cursor: "pointer",
+                        }}
+                        onClick={() => setSelectedTx(tx)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setSelectedTx(tx);
+                          }
+                        }}
+                      >
+                        <td>
+                          <StatusBadge status={tx.state} />
+                        </td>
+                        <td className={styles.numCol} style={{ textAlign: "right" }}>
+                          <Amount amountMinor={tx.amountMinor} currency="PHP" align="right" />
+                        </td>
+                        <td>
+                          <div
+                            style={{ fontWeight: 600, color: "var(--color-text-primary, #0f172a)" }}
                           >
-                            Quick View
-                          </button>
-                          <Link
-                            href={`/ops/transactions/${tx.id}`}
-                            className={styles.buttonSecondary}
-                            style={{
-                              padding: "4px 8px",
-                              fontSize: "11px",
-                              textDecoration: "none",
-                              color: "#0f52ba",
-                              fontWeight: 600,
-                            }}
-                            onClick={(e) => e.stopPropagation()}
+                            {tx.orderNumber}
+                          </div>
+                          <code
+                            style={{ fontSize: "11px", color: "var(--color-text-muted, #64748b)" }}
                           >
-                            Inspect →
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                            {tx.id}
+                          </code>
+                        </td>
+                        <td>
+                          <span className={styles.badgePill}>{tx.method.toUpperCase()}</span>
+                        </td>
+                        <td>
+                          <span style={{ fontSize: "12px", color: "#475569" }}>{tx.provider}</span>
+                        </td>
+                        <td>
+                          <span style={{ fontSize: "12px", color: "#64748b" }}>{tx.createdAt}</span>
+                        </td>
+                        <td>
+                          <div style={{ display: "flex", gap: "6px" }}>
+                            <button
+                              type="button"
+                              className={styles.buttonSecondary}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedTx(tx);
+                              }}
+                              style={{ padding: "6px 10px", fontSize: "12px", minHeight: "36px" }}
+                            >
+                              Quick View
+                            </button>
+                            <Link
+                              href={`/ops/transactions/${tx.id}`}
+                              className={styles.buttonSecondary}
+                              style={{
+                                padding: "6px 10px",
+                                fontSize: "12px",
+                                minHeight: "36px",
+                                textDecoration: "none",
+                                color: "#0f52ba",
+                                fontWeight: 600,
+                                display: "inline-flex",
+                                alignItems: "center",
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              Inspect →
+                            </Link>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={7}>
+                      <div className={styles.tableEmptyState}>
+                        <h3 className={styles.emptyStateTitle}>No transactions recorded</h3>
+                        <p className={styles.emptyStateDesc}>
+                          No transactions matching your filter exist in the PostgreSQL database.
+                        </p>
+                        <Link
+                          href="/demo/qrph"
+                          className={styles.buttonPrimary}
+                          style={{ textDecoration: "none", marginTop: "6px" }}
+                        >
+                          Test QR Ph Checkout →
+                        </Link>
+                      </div>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -329,141 +335,118 @@ export default function TransactionsPage() {
           <div className={styles.cardHeader}>
             <h2 className={styles.cardTitle}>Investigation Inspector</h2>
             {selectedTx ? (
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <StatusBadge status={selectedTx.state} />
-                <Link
-                  href={`/ops/transactions/${selectedTx.id}`}
-                  style={{
-                    fontSize: "12px",
-                    color: "#0f52ba",
-                    textDecoration: "none",
-                    fontWeight: 600,
-                  }}
-                >
-                  Full Detail ↗
-                </Link>
-              </div>
+              <StatusBadge status={selectedTx.state} />
             ) : (
-              <span className={styles.badgePill}>SELECT A TRANSACTION</span>
+              <span className={styles.badgePill}>NO SELECTION</span>
             )}
           </div>
 
           {selectedTx ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-              <div>
-                <h3
-                  style={{
-                    fontSize: "12px",
-                    color: "var(--color-text-muted, #64748b)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.04em",
-                    margin: "0 0 8px 0",
-                  }}
-                >
-                  State Transition Journey
-                </h3>
+            <div>
+              <div
+                style={{
+                  background: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "6px",
+                  padding: "16px",
+                  marginBottom: "20px",
+                }}
+              >
+                <div style={{ fontSize: "11px", color: "#64748b", textTransform: "uppercase" }}>
+                  Selected Intent
+                </div>
                 <div
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    padding: "12px",
-                    background: "#f8fafc",
-                    borderRadius: "6px",
-                    border: "1px solid var(--color-border, #e2e8f0)",
-                    fontSize: "12px",
+                    fontSize: "18px",
+                    fontWeight: 700,
+                    color: "#0f172a",
                     fontFamily: "ui-monospace, monospace",
+                    margin: "4px 0",
                   }}
                 >
-                  <span style={{ color: "#16a34a" }}>CREATED</span>
-                  <span>→</span>
-                  <span style={{ color: "#16a34a" }}>SUBMISSION_PENDING</span>
-                  <span>→</span>
-                  <span style={{ color: selectedTx.state === "FAILED" ? "#dc2626" : "#16a34a" }}>
-                    {selectedTx.state}
-                  </span>
+                  {selectedTx.id}
+                </div>
+                <div style={{ fontSize: "13px", color: "#334155" }}>
+                  Order: <strong>{selectedTx.orderNumber}</strong> · Amount:{" "}
+                  <strong>
+                    <Amount amountMinor={selectedTx.amountMinor} currency="PHP" />
+                  </strong>
                 </div>
               </div>
 
+              <h3 style={{ fontSize: "13px", fontWeight: 600, marginBottom: "10px" }}>
+                Cryptographic &amp; Idempotency Proofs
+              </h3>
               <DetailList
                 items={[
-                  { label: "Payment Intent ID", value: <code>{selectedTx.id}</code> },
-                  { label: "Order Reference", value: selectedTx.orderNumber },
-                  {
-                    label: "Amount Settled",
-                    value: <Amount amountMinor={selectedTx.amountMinor} currency="PHP" />,
-                  },
-                  {
-                    label: "Authoritative Idempotency Key",
-                    value: <code>{selectedTx.idempotencyKey}</code>,
-                  },
-                  {
-                    label: "Verified Provider Event",
-                    value: <code>{selectedTx.providerEventId}</code>,
-                  },
-                  {
-                    label: "Provider",
-                    value: <span>{selectedTx.provider}</span>,
-                  },
+                  { label: "Idempotency Key", value: selectedTx.idempotencyKey },
+                  { label: "Provider Event ID", value: selectedTx.providerEventId },
+                  { label: "Method Type", value: selectedTx.method.toUpperCase() },
+                  { label: "Provider Gateway", value: selectedTx.provider },
+                  { label: "Created Timestamp", value: selectedTx.createdAt },
                 ]}
               />
 
               <div
                 style={{
                   display: "flex",
-                  gap: "8px",
-                  paddingTop: "12px",
-                  borderTop: "1px solid var(--color-border, #e2e8f0)",
+                  gap: "10px",
+                  marginTop: "20px",
+                  flexWrap: "wrap",
                 }}
               >
-                <Link
-                  href={`/ops/transactions/${selectedTx.id}`}
-                  className={styles.buttonPrimary}
-                  style={{
-                    flex: 1,
-                    textAlign: "center",
-                    textDecoration: "none",
-                    padding: "8px 12px",
-                    fontSize: "12px",
-                  }}
-                >
-                  Open Full Investigation View ↗
-                </Link>
-                {selectedTx.state === "SUCCEEDED" && (
-                  <button
-                    type="button"
-                    className={styles.buttonSecondary}
-                    onClick={() => handleSimulateRefund(selectedTx)}
-                    style={{ flex: 1, fontSize: "12px" }}
-                  >
-                    Stage Refund
-                  </button>
-                )}
                 <button
                   type="button"
                   className={styles.buttonSecondary}
                   onClick={() => handleViewPayload(selectedTx)}
-                  style={{ fontSize: "12px" }}
+                  style={{ minHeight: "36px" }}
                 >
                   Verify Payload
                 </button>
+                <button
+                  type="button"
+                  className={styles.buttonSecondary}
+                  onClick={() => handleSimulateRefund(selectedTx)}
+                  style={{ minHeight: "36px" }}
+                >
+                  Stage Refund
+                </button>
+                <Link
+                  href={`/ops/transactions/${selectedTx.id}`}
+                  className={styles.buttonPrimary}
+                  style={{
+                    textDecoration: "none",
+                    minHeight: "36px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                  }}
+                >
+                  Open Full Investigation View →
+                </Link>
               </div>
             </div>
           ) : (
-            <div
-              style={{
-                padding: "36px 20px",
-                textAlign: "center",
-                color: "var(--color-text-muted, #64748b)",
-                fontSize: "13px",
-              }}
-            >
-              Select any transaction row from the table to inspect state lifecycle, idempotency key
-              records, and cryptographic provider evidence.
+            <div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
+              Select a transaction to inspect its cryptographic proofs, raw payloads, and ledger
+              journal entries.
             </div>
           )}
         </div>
       </div>
     </div>
+  );
+}
+
+export default function TransactionsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div style={{ padding: "28px" }}>
+          <Skeleton height="200px" />
+        </div>
+      }
+    >
+      <TransactionsContent />
+    </Suspense>
   );
 }
