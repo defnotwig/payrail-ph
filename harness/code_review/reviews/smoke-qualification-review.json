@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 2,
+  "reviewedBaseSha": "b69e5ff03d56822e0cf2f212cf9af84008f78af2",
+  "reviewedDiffSha256": "df888c695b556fb1b4906dc59b561520c7177bb2327718ddeb342d9f04b57fc8",
+  "reviewer": "codex-subagent/independent-review",
+  "reviewSource": "separate-agent-review",
+  "reviewReport": "smoke-qualification-review.md",
+  "reviewReportSha256": "3509f50c34241b85e169e3a01a817bc4aa8557299743e21f87a30acc1cd59aa2",
+  "reviewedAt": "2026-10-19T01:26:32.106Z",
+  "verdict": "approve",
+  "findings": []
+}
