@@ -1,0 +1,20 @@
+# PayRail PH Environment Variable Matrix
+
+This matrix documents all runtime and build environment variables required across deployment tiers. **Never commit actual secret values to version control, PRs, or public channels.**
+
+| Variable | Used by | Local | Preview | Production | Secret? | Browser-visible? | Required? | Purpose & Constraints |
+|---|---|---|---|---|---|---|---|---|
+| `API_PORT` | NestJS API | `4000` | N/A (Vercel assigns port) | N/A (Vercel assigns port) | No | No | No (Defaults to `4000`) | HTTP listen port for standalone Node process. |
+| `DATABASE_URL` | API Runtime, Next.js Proxy, Tests | `postgresql://payrail@127.0.0.1:55432/payrail_local` | Supavisor pooler (port 6543, transaction mode) | Supavisor pooler (port 6543, transaction mode) | **Yes** | No | **Yes** | Primary transactional connection string for application runtime queries. |
+| `MIGRATION_DATABASE_URL` | Database Migrations (`@payrail/database`) | `postgresql://payrail@127.0.0.1:55432/payrail_local` | Direct Postgres / Session pooler (port 5432) | Direct Postgres / Session pooler (port 5432) | **Yes** | No | Optional (Falls back to `DATABASE_URL`) | Required for advisory locking (`pg_advisory_lock`) during migration runs. |
+| `WEB_ORIGIN` | NestJS API (CORS) | `http://localhost:3000` | `https://payrail-ph-web-*.vercel.app` | `https://payrail-ph-web-main.vercel.app` | No | No | **Yes** | Authoritative web frontend origin for CORS preflight and allowed headers. |
+| `SUPABASE_URL` | NestJS API (Auth JWKS) | `https://identity.example.test` (or Supabase project) | `https://YOUR-PROJECT.supabase.co` | `https://YOUR-PROJECT.supabase.co` | No | No | **Yes** | Supabase project URL used to resolve JWKS for operator identity verification. |
+| `APP_ENV` | API Runtime, Security Controls | `local` | `staging` | `production` | No | No | **Yes** | Environment tier selector (`local`, `test`, `staging`, `production`). Rejects placeholder keys in non-local tiers. |
+| `WEBHOOK_ENCRYPTION_KEY` | NestJS API (Secrets encryption) | 64-hex local fixture key | 64-hex high-entropy key | 64-hex high-entropy key | **Yes** | No | **Yes** | 256-bit AES-GCM master key used to encrypt merchant outbound webhook signing secrets. |
+| `PAYMONGO_SECRET_KEY` | PayMongo Adapter (API) | `sk_test_placeholder` (or sandbox test key) | Real sandbox `sk_test_...` | Real sandbox `sk_test_...` | **Yes** | No | **Yes** | PayMongo API secret key for PaymentIntent and PaymentMethod creation. Must start with `sk_test_`. |
+| `PAYMONGO_WEBHOOK_SECRET` | Webhook Receiver (API) | `whsk_test_placeholder` (or real webhook secret) | Real sandbox `whsk_test_...` | Real sandbox `whsk_test_...` | **Yes** | No | **Yes** | Signing secret for verifying inbound `Paymongo-Signature` headers with timing-safe HMAC-SHA256. |
+| `PAYMENTS_MODE` | API, PayMongo Adapter | `test` | `test` | `test` | No | No | **Yes** (Strictly `test`) | System payment mode invariant. Live money processing is strictly prohibited. |
+| `NEXT_PUBLIC_API_BASE_URL` | Next.js Frontend | `http://localhost:4000` (or empty for `/api`) | `""` (Uses same-origin `/api` route handler) | `""` (Uses same-origin `/api` route handler) | No | **Yes** | No | Client-side base URL. Defaults to relative `/api/payments` in production to prevent loopback / CORS issues. |
+| `INTERNAL_API_URL` | Next.js Route Handlers | `http://127.0.0.1:4000` | Deployed NestJS API URL (e.g. `https://payrail-ph-api.vercel.app`) | Deployed NestJS API URL (e.g. `https://payrail-ph-api.vercel.app`) | No | No | No (Falls back to `API_BASE_URL` or `localhost:4000`) | Server-side API endpoint used by Next.js Route Handlers and rewrites. |
+| `DEMO_MERCHANT_API_KEY` | Next.js Route Handlers | `sk_test_payrail_demo_merchant_default_9f8e7d6c5b4a` | Seeded demo merchant key | Seeded demo merchant key | **Yes** | No | Optional (Default seeded key available) | Server-side merchant key for the public `/demo/qrph` sandbox flow to authenticate with NestJS API. |
+| `DB_POOL_MAX` | Database Pool | `5` | `2` | `2` | No | No | No (Defaults to `5`) | Maximum pool connections per serverless invocation container. |
