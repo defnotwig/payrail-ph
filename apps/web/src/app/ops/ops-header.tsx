@@ -1,10 +1,10 @@
 "use client";
 
-import type React from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import styles from "./ops.module.css";
+import { GlobalSearchModal } from "../../components/global-search-modal";
 
 interface OpsHeaderProps {
   onToggleMobileSidebar?: () => void;
@@ -12,9 +12,7 @@ interface OpsHeaderProps {
 
 export function OpsHeader({ onToggleMobileSidebar }: OpsHeaderProps) {
   const pathname = usePathname();
-  const router = useRouter();
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [circuitStatus, setCircuitStatus] = useState<
     "HEALTHY" | "DEGRADED" | "UNAVAILABLE" | "UNKNOWN"
   >("UNKNOWN");
@@ -29,8 +27,7 @@ export function OpsHeader({ onToggleMobileSidebar }: OpsHeaderProps) {
         ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k")
       ) {
         e.preventDefault();
-        searchInputRef.current?.focus();
-        searchInputRef.current?.select();
+        setIsSearchModalOpen(true);
       }
     }
 
@@ -77,30 +74,6 @@ export function OpsHeader({ onToggleMobileSidebar }: OpsHeaderProps) {
       clearInterval(interval);
     };
   }, []);
-
-  // Simple quick navigation / identifier lookup
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const q = searchQuery.trim();
-    if (!q) return;
-
-    if (q.startsWith("pi_") || q.startsWith("pay_") || q.startsWith("PRL-")) {
-      router.push(`/ops/transactions?search=${encodeURIComponent(q)}`);
-    } else if (q.toLowerCase().includes("ledger")) {
-      router.push("/ops/ledger");
-    } else if (q.toLowerCase().includes("refund")) {
-      router.push("/ops/refunds");
-    } else if (q.toLowerCase().includes("reconcil")) {
-      router.push("/ops/reconciliation");
-    } else if (q.toLowerCase().includes("job") || q.toLowerCase().includes("dlq")) {
-      router.push("/ops/jobs");
-    } else if (q.toLowerCase().includes("webhook") || q.toLowerCase().includes("api")) {
-      router.push("/ops/developer");
-    } else {
-      router.push(`/ops/transactions?search=${encodeURIComponent(q)}`);
-    }
-    setSearchQuery("");
-  };
 
   // Derive simple breadcrumb
   const getBreadcrumb = () => {
@@ -152,35 +125,40 @@ export function OpsHeader({ onToggleMobileSidebar }: OpsHeaderProps) {
 
       {/* Global Command Search Bar */}
       <search className={styles.commandBarForm}>
-        <form onSubmit={handleSearchSubmit}>
-          <div className={styles.commandBarInputWrapper}>
-            <svg
-              className={styles.searchIcon}
-              width="14"
-              height="14"
-              viewBox="0 0 14 14"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <circle cx="6" cy="6" r="4.5" />
-              <path d="M9.5 9.5L12.5 12.5" />
-            </svg>
-            <input
-              ref={searchInputRef}
-              type="search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search payments, references, accounts... (Press / to focus)"
-              className={styles.commandBarInput}
-              aria-label="Search operational data"
-            />
-            <kbd className={styles.keyboardShortcutKbd}>/</kbd>
-          </div>
-        </form>
+        <button
+          type="button"
+          className={styles.commandBarInputWrapper}
+          onClick={() => setIsSearchModalOpen(true)}
+          aria-label="Open operations search"
+          style={{
+            width: "100%",
+            background: "none",
+            border: "none",
+            padding: 0,
+            textAlign: "left",
+            cursor: "pointer",
+          }}
+        >
+          <svg
+            className={styles.searchIcon}
+            width="14"
+            height="14"
+            viewBox="0 0 14 14"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="6" cy="6" r="4.5" />
+            <path d="M9.5 9.5L12.5 12.5" />
+          </svg>
+          <span className={styles.commandBarInput} style={{ display: "block" }}>
+            Search payments (PRL-...), refunds, ledger, webhooks... (Press / to search)
+          </span>
+          <kbd className={styles.keyboardShortcutKbd}>/</kbd>
+        </button>
       </search>
 
       {/* Right Header Badges and Public Switch */}
@@ -235,6 +213,8 @@ export function OpsHeader({ onToggleMobileSidebar }: OpsHeaderProps) {
           <span aria-hidden="true">←</span> Public Demo
         </Link>
       </div>
+
+      <GlobalSearchModal isOpen={isSearchModalOpen} onClose={() => setIsSearchModalOpen(false)} />
     </header>
   );
 }
