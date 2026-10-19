@@ -1,21 +1,19 @@
 import { type NextRequest, NextResponse } from "next/server";
+import {
+  resolveInternalApiUrl,
+  resolveDemoMerchantApiKey,
+  formatRouteError,
+} from "../../../../lib/server-api-config";
 
 export async function GET(request: NextRequest) {
+  const requestId =
+    request.headers.get("x-request-id") ||
+    request.headers.get("x-correlation-id") ||
+    crypto.randomUUID();
+
   try {
-    const apiBase = (
-      process.env.INTERNAL_API_URL ||
-      process.env.API_BASE_URL ||
-      process.env.NEXT_PUBLIC_API_BASE_URL ||
-      "http://127.0.0.1:4000"
-    ).replace(/\/+$/, "");
-
-    const apiKey =
-      process.env.DEMO_MERCHANT_API_KEY || "sk_test_payrail_demo_merchant_default_9f8e7d6c5b4a";
-
-    const requestId =
-      request.headers.get("x-request-id") ||
-      request.headers.get("x-correlation-id") ||
-      crypto.randomUUID();
+    const apiBase = resolveInternalApiUrl();
+    const apiKey = resolveDemoMerchantApiKey();
 
     const response = await fetch(`${apiBase}/ops/reconciliation`, {
       method: "GET",
@@ -37,34 +35,23 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to communicate with reconciliation service";
-    return NextResponse.json(
-      {
-        message: "We couldn't reach the reconciliation operations service.",
-        detail: message,
-      },
-      { status: 502 },
+    return formatRouteError(
+      error,
+      "Reconciliation service unavailable. Could not fetch reconciliation discrepancy records.",
+      requestId,
     );
   }
 }
 
 export async function POST(request: NextRequest) {
+  const requestId =
+    request.headers.get("x-request-id") ||
+    request.headers.get("x-correlation-id") ||
+    crypto.randomUUID();
+
   try {
-    const apiBase = (
-      process.env.INTERNAL_API_URL ||
-      process.env.API_BASE_URL ||
-      process.env.NEXT_PUBLIC_API_BASE_URL ||
-      "http://127.0.0.1:4000"
-    ).replace(/\/+$/, "");
-
-    const apiKey =
-      process.env.DEMO_MERCHANT_API_KEY || "sk_test_payrail_demo_merchant_default_9f8e7d6c5b4a";
-
-    const requestId =
-      request.headers.get("x-request-id") ||
-      request.headers.get("x-correlation-id") ||
-      crypto.randomUUID();
+    const apiBase = resolveInternalApiUrl();
+    const apiKey = resolveDemoMerchantApiKey();
 
     const response = await fetch(`${apiBase}/ops/reconciliation/run`, {
       method: "POST",
@@ -87,13 +74,10 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to execute reconciliation";
-    return NextResponse.json(
-      {
-        message: "We couldn't execute the reconciliation run.",
-        detail: message,
-      },
-      { status: 502 },
+    return formatRouteError(
+      error,
+      "Reconciliation run failed. Could not trigger automated reconciliation.",
+      requestId,
     );
   }
 }

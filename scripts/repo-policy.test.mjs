@@ -7,6 +7,7 @@ import {
   isConventionalPullRequestTitle,
   isCommitRangeValid,
   isPromotionAllowed,
+  isProductionApiTargetValid,
 } from "./repo-policy.mjs";
 
 test("accepts the approved Conventional Commit types and optional scopes", () => {
@@ -95,4 +96,30 @@ test("allows only the documented promotion flow and urgent fixes", () => {
   assert.equal(isPromotionAllowed("main", "dev"), false);
   assert.equal(isPromotionAllowed("dev", "main"), false);
   assert.equal(isPromotionAllowed("topic/money", "staging"), false);
+});
+
+test("production web configuration must not resolve internal API to localhost", () => {
+  const prodEnv = { NODE_ENV: "production", APP_ENV: "production", VERCEL: "1" };
+  const devEnv = { NODE_ENV: "development", APP_ENV: "development" };
+
+  // Local development allows localhost
+  assert.equal(isProductionApiTargetValid("http://127.0.0.1:4000", devEnv), true);
+  assert.equal(isProductionApiTargetValid("http://localhost:4000", devEnv), true);
+
+  // Production disallows missing / undefined URL
+  assert.equal(isProductionApiTargetValid(undefined, prodEnv), false);
+  assert.equal(isProductionApiTargetValid("", prodEnv), false);
+
+  // Production disallows localhost loopback
+  assert.equal(isProductionApiTargetValid("http://127.0.0.1:4000", prodEnv), false);
+  assert.equal(isProductionApiTargetValid("http://localhost:4000", prodEnv), false);
+  assert.equal(isProductionApiTargetValid("http://0.0.0.0:4000", prodEnv), false);
+  assert.equal(isProductionApiTargetValid("https://localhost:4000", prodEnv), false);
+
+  // Production disallows non-https protocols
+  assert.equal(isProductionApiTargetValid("http://api.payrail.ph", prodEnv), false);
+
+  // Production requires a valid deployed HTTPS endpoint
+  assert.equal(isProductionApiTargetValid("https://payrail-ph-api.vercel.app", prodEnv), true);
+  assert.equal(isProductionApiTargetValid("https://api.payrail.ph", prodEnv), true);
 });

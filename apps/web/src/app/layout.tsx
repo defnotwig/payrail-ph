@@ -21,6 +21,9 @@ export const metadata: Metadata = {
   description:
     "A sandbox-only Philippine payment orchestration portfolio built around durable evidence, careful state transitions, and recoverable processing.",
   applicationName: "PayRail PH",
+  icons: {
+    icon: "/favicon.svg",
+  },
   robots: { index: false, follow: false },
 };
 

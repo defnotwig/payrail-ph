@@ -15,7 +15,9 @@ export function OpsHeader({ onToggleMobileSidebar }: OpsHeaderProps) {
   const router = useRouter();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [circuitStatus, setCircuitStatus] = useState<"HEALTHY" | "DEGRADED" | "UNKNOWN">("HEALTHY");
+  const [circuitStatus, setCircuitStatus] = useState<
+    "HEALTHY" | "DEGRADED" | "UNAVAILABLE" | "UNKNOWN"
+  >("UNKNOWN");
 
   // Global keyboard shortcut '/' or 'Cmd+K' / 'Ctrl+K'
   useEffect(() => {
@@ -42,16 +44,30 @@ export function OpsHeader({ onToggleMobileSidebar }: OpsHeaderProps) {
     async function checkHealth() {
       try {
         const res = await fetch("/api/ops/health");
-        if (res.ok && mounted) {
-          const data = await res.json();
-          if (data.status === "ok" || data.providerCircuit === "CLOSED") {
-            setCircuitStatus("HEALTHY");
-          } else {
-            setCircuitStatus("DEGRADED");
-          }
+        if (!res.ok) {
+          if (mounted) setCircuitStatus("UNAVAILABLE");
+          return;
+        }
+
+        const json = await res.json().catch(() => ({}));
+        if (!mounted) return;
+
+        const healthData = json.data || json;
+        const paymongoComp = healthData.components?.paymongo;
+        const paymongoStatus = paymongoComp?.status;
+        const circuit = paymongoComp?.circuit || paymongoComp?.circuitState;
+
+        if (paymongoStatus === "HEALTHY" || circuit === "CLOSED") {
+          setCircuitStatus("HEALTHY");
+        } else if (paymongoStatus === "DEGRADED" || circuit === "HALF_OPEN") {
+          setCircuitStatus("DEGRADED");
+        } else if (paymongoStatus === "DOWN" || circuit === "OPEN") {
+          setCircuitStatus("UNAVAILABLE");
+        } else {
+          setCircuitStatus("UNKNOWN");
         }
       } catch {
-        if (mounted) setCircuitStatus("UNKNOWN");
+        if (mounted) setCircuitStatus("UNAVAILABLE");
       }
     }
     checkHealth();
@@ -176,18 +192,21 @@ export function OpsHeader({ onToggleMobileSidebar }: OpsHeaderProps) {
               ? styles.circuitPillHealthy
               : circuitStatus === "DEGRADED"
                 ? styles.circuitPillDegraded
-                : styles.circuitPillUnknown
+                : circuitStatus === "UNAVAILABLE"
+                  ? styles.circuitPillUnavailable
+                  : styles.circuitPillUnknown
           }`}
           title="Live circuit breaker and provider health status"
         >
           <span className={styles.circuitDot} aria-hidden="true" />
           <span className={styles.circuitLabel}>
-            PayMongo:{" "}
             {circuitStatus === "HEALTHY"
-              ? "HEALTHY"
+              ? "PayMongo: HEALTHY"
               : circuitStatus === "DEGRADED"
-                ? "CIRCUIT TRIPPED"
-                : "CONNECTING"}
+                ? "PayMongo: DEGRADED"
+                : circuitStatus === "UNAVAILABLE"
+                  ? "PayMongo: UNAVAILABLE"
+                  : "Telemetry: UNKNOWN"}
           </span>
         </div>
 

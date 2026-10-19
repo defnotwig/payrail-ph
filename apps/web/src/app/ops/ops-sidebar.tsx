@@ -300,7 +300,22 @@ export function OpsSidebar({ isMobileOpen = false, onCloseMobile }: OpsSidebarPr
             aria-label="PayRail PH Operations Console"
           >
             <span className={styles.sidebarBrandLogo} aria-hidden="true">
-              PR
+              <svg width="20" height="20" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                <path
+                  d="M6 27.5V11.5A7 7 0 0 1 13 4.5H16.5A7 7 0 0 1 23.5 11.5A7 7 0 0 1 16.5 18.5L25.5 27.5"
+                  stroke="#ffffff"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M10.5 27.5V11.5A2.5 2.5 0 0 1 13 9H16.5A2.5 2.5 0 0 1 19 11.5A2.5 2.5 0 0 1 16.5 14H10.5"
+                  stroke="#ffffff"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </span>
             <div className={styles.sidebarBrandTitles}>
               <span className={styles.sidebarBrandMain}>
@@ -354,6 +369,7 @@ export function OpsSidebar({ isMobileOpen = false, onCloseMobile }: OpsSidebarPr
                     <li key={item.href} className={styles.navGroupItem}>
                       <Link
                         href={item.href}
+                        title={isCollapsed ? item.label : undefined}
                         className={`${styles.sidebarNavLink} ${
                           active ? styles.sidebarNavLinkActive : ""
                         }`}

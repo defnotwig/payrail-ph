@@ -1,6 +1,16 @@
 import { type NextRequest, NextResponse } from "next/server";
+import {
+  resolveInternalApiUrl,
+  resolveDemoMerchantApiKey,
+  formatRouteError,
+} from "../../../lib/server-api-config";
 
 export async function POST(request: NextRequest) {
+  const requestId =
+    request.headers.get("x-request-id") ||
+    request.headers.get("x-correlation-id") ||
+    crypto.randomUUID();
+
   try {
     const idempotencyKey = request.headers.get("idempotency-key");
     if (!idempotencyKey) {
@@ -8,20 +18,8 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const apiBase = (
-      process.env.INTERNAL_API_URL ||
-      process.env.API_BASE_URL ||
-      process.env.NEXT_PUBLIC_API_BASE_URL ||
-      "http://127.0.0.1:4000"
-    ).replace(/\/+$/, "");
-
-    const apiKey =
-      process.env.DEMO_MERCHANT_API_KEY || "sk_test_payrail_demo_merchant_default_9f8e7d6c5b4a";
-
-    const requestId =
-      request.headers.get("x-request-id") ||
-      request.headers.get("x-correlation-id") ||
-      crypto.randomUUID();
+    const apiBase = resolveInternalApiUrl();
+    const apiKey = resolveDemoMerchantApiKey();
 
     const response = await fetch(`${apiBase}/payments`, {
       method: "POST",
@@ -45,35 +43,23 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to communicate with payment service";
-    return NextResponse.json(
-      {
-        message:
-          "We couldn't reach the sandbox payment service. No new payment was submitted. Try again in a moment.",
-        detail: message,
-      },
-      { status: 502 },
+    return formatRouteError(
+      error,
+      "Sandbox payment service unavailable. No payment was submitted. It's safe to try again.",
+      requestId,
     );
   }
 }
 
 export async function GET(request: NextRequest) {
+  const requestId =
+    request.headers.get("x-request-id") ||
+    request.headers.get("x-correlation-id") ||
+    crypto.randomUUID();
+
   try {
-    const apiBase = (
-      process.env.INTERNAL_API_URL ||
-      process.env.API_BASE_URL ||
-      process.env.NEXT_PUBLIC_API_BASE_URL ||
-      "http://127.0.0.1:4000"
-    ).replace(/\/+$/, "");
-
-    const apiKey =
-      process.env.DEMO_MERCHANT_API_KEY || "sk_test_payrail_demo_merchant_default_9f8e7d6c5b4a";
-
-    const requestId =
-      request.headers.get("x-request-id") ||
-      request.headers.get("x-correlation-id") ||
-      crypto.randomUUID();
+    const apiBase = resolveInternalApiUrl();
+    const apiKey = resolveDemoMerchantApiKey();
 
     const response = await fetch(`${apiBase}/payments?limit=50`, {
       method: "GET",
@@ -95,14 +81,10 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to communicate with payment service";
-    return NextResponse.json(
-      {
-        message: "We couldn't reach the sandbox payment service.",
-        detail: message,
-      },
-      { status: 502 },
+    return formatRouteError(
+      error,
+      "Sandbox payment service unavailable. Payment records cannot be retrieved.",
+      requestId,
     );
   }
 }
