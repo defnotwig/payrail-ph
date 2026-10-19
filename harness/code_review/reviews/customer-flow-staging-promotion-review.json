@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 2,
+  "reviewedBaseSha": "6e30c542d4ad6aa1d9d5c2cad3f869460f72bc27",
+  "reviewedDiffSha256": "8eb127a1ee8bdd8e7c926dc1fce0584b2b21f45ded082ca79bd9f73b409a6247",
+  "reviewer": "codex-subagent/independent-review",
+  "reviewSource": "separate-agent-review",
+  "reviewReport": "customer-flow-staging-promotion-review.md",
+  "reviewReportSha256": "3fedee77c05ce60068bc5bba01a46a5b2b8cba783b79366d6573c7fccbdee034",
+  "reviewedAt": "2026-10-19T03:36:00.000Z",
+  "verdict": "approve",
+  "findings": []
+}

@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 2,
+  "reviewedBaseSha": "9f1156a78b8b260a05ebf4d3a695b178a0e73030",
+  "reviewedDiffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "reviewer": "codex-subagent/independent-review",
+  "reviewSource": "separate-agent-review",
+  "reviewReport": "customer-flow-promotion-records-review.md",
+  "reviewReportSha256": "d44cba7b92c65b9e06063d9a794a0c185d333a1272e0efc1e52372035c03d4ac",
+  "reviewedAt": "2026-10-19T03:35:00.000Z",
+  "verdict": "approve",
+  "findings": []
+}
