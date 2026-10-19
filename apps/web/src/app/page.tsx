@@ -1,215 +1,233 @@
-import Image from "next/image";
 import Link from "next/link";
-import heroFlow from "../../public/images/payrail-verified-flow.jpg";
-import mountainHorizon from "../../public/images/payrail-mountain-horizon.jpg";
-import { QrPhPaymentFlow } from "../components/qrph-payment-flow";
-
-const steps = [
-  {
-    number: "1",
-    symbol: "▤",
-    title: "Create attempt",
-    detail: "A payment attempt is created in test mode and recorded with a pending status.",
-  },
-  {
-    number: "2",
-    symbol: "✓",
-    title: "Verify webhook",
-    detail:
-      "Incoming PayMongo webhook events are checked for authenticity, relevance, and idempotency.",
-  },
-  {
-    number: "3",
-    symbol: "◎",
-    title: "Persist work",
-    detail:
-      "Verified events are stored, linking provider evidence to internal payment state changes.",
-  },
-  {
-    number: "4",
-    symbol: "▤",
-    title: "Post balanced ledger",
-    detail:
-      "State changes trigger balanced ledger entries to keep records consistent and auditable.",
-  },
-];
+import styles from "./page.module.css";
+import { OrchestrationVisual } from "../components/orchestration-visual";
+import { FlowSection } from "../components/flow-section";
+import { ProductPreview } from "../components/product-preview";
 
 export default function Home() {
   return (
-    <main id="top">
-      <header className="site-header page-gutter">
-        <a className="wordmark" href="#top" aria-label="PayRail PH home">
+    <main id="top" className={styles.main}>
+      {/* 1. Public Navigation Header */}
+      <header className={`page-gutter ${styles.siteHeader}`}>
+        <a className={styles.wordmark} href="#top" aria-label="PayRail PH home">
           PayRail <span>PH</span>
         </a>
-        <nav className="primary-nav" aria-label="Main navigation">
-          <a href="#system">System design</a>
-          <Link href="/demo/qrph">QR Ph Demo</Link>
-          <Link href="/ops/reliability-lab">Reliability Lab</Link>
-          <span className="nav-divider" aria-hidden="true" />
-          <Link className="nav-access" href="/ops">
-            Operator portal <span aria-hidden="true">↗</span>
+        <nav className={styles.primaryNav} aria-label="Main navigation">
+          <a className={styles.navLink} href="#flow">
+            How it works
+          </a>
+          <Link className={styles.navLink} href="/demo/qrph">
+            QR Ph Demo
+          </Link>
+          <Link className={styles.navLink} href="/ops/reliability-lab">
+            Reliability
+          </Link>
+          <Link className={styles.navButton} href="/ops">
+            Open Console <span aria-hidden="true">→</span>
           </Link>
         </nav>
       </header>
 
-      <section className="hero page-gutter" aria-labelledby="hero-title">
-        <div className="hero-copy">
-          <p className="hero-label hero-label-sandbox">TEST ENVIRONMENT · NO REAL FUNDS</p>
-          <h1 id="hero-title">Reliable payment orchestration, from checkout to reconciliation.</h1>
-          <p className="hero-intro">
-            A sandbox platform demonstrating payment processing, signed webhooks, idempotent
-            financial effects, balanced ledgering, and operational visibility.
+      {/* 2. Hero Section: Headline + Restrained Orchestration Visual */}
+      <section className={`page-gutter ${styles.hero}`} aria-labelledby="hero-title">
+        <div className={styles.heroContent}>
+          <div className={styles.heroCopy}>
+            <div className={styles.envBadge} role="status" title="No real funds processed">
+              <span className={styles.envDot} aria-hidden="true" />
+              <span>TEST ENVIRONMENT</span>
+            </div>
+
+            <h1 id="hero-title" className={styles.heroTitle}>
+              Payments that stay correct when systems don&apos;t.
+            </h1>
+
+            <p className={styles.heroIntro}>
+              PayRail demonstrates payment orchestration, signed webhooks, idempotent financial
+              effects, double-entry ledgering and operational recovery using a real PayMongo sandbox
+              integration.
+            </p>
+
+            <div className={styles.ctaGroup}>
+              <Link className={styles.primaryCta} href="/demo/qrph">
+                Run QR Ph demo <span aria-hidden="true">→</span>
+              </Link>
+              <Link className={styles.secondaryCta} href="/ops">
+                Explore operations <span aria-hidden="true">↗</span>
+              </Link>
+            </div>
+          </div>
+
+          <OrchestrationVisual />
+        </div>
+      </section>
+
+      {/* 3. Section 2: 6-Step End-to-End Payment Flow */}
+      <FlowSection />
+
+      {/* 4. Section 3: Three Capability Pillars */}
+      <section className={`page-gutter ${styles.pillarsSection}`} aria-labelledby="pillars-title">
+        <div className={styles.pillarsGrid}>
+          <div className={styles.pillarCard}>
+            <div className={styles.pillarHeader}>
+              <span className={styles.pillarIcon} aria-hidden="true">
+                ⚡
+              </span>
+              <h3 className={styles.pillarTitle}>Process</h3>
+            </div>
+            <p className={styles.pillarBody}>
+              Create and track real QR Ph transactions with instant provider simulator integration,
+              dynamic fee policy evaluation, and sub-second confirmation telemetry.
+            </p>
+          </div>
+
+          <div className={styles.pillarCard}>
+            <div className={styles.pillarHeader}>
+              <span className={styles.pillarIcon} aria-hidden="true">
+                🛡
+              </span>
+              <h3 className={styles.pillarTitle}>Protect</h3>
+            </div>
+            <p className={styles.pillarBody}>
+              Prevent duplicate financial effects with merchant-scoped idempotency keys,
+              constant-time HMAC signature verification, and row-level aggregate refund guards.
+            </p>
+          </div>
+
+          <div className={styles.pillarCard}>
+            <div className={styles.pillarHeader}>
+              <span className={styles.pillarIcon} aria-hidden="true">
+                🔄
+              </span>
+              <h3 className={styles.pillarTitle}>Recover</h3>
+            </div>
+            <p className={styles.pillarBody}>
+              Audit exceptions with automated 3-way reconciliation, fail closed with provider
+              circuit breakers, and replay dead-lettered background jobs with lease fencing.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* 5. Section 4: Operational Product Proof */}
+      <ProductPreview />
+
+      {/* 6. Section 5: Technical Proof for Engineers */}
+      <section className={`page-gutter ${styles.techProofSection}`} aria-labelledby="tech-title">
+        <div className={styles.techProofTitleArea}>
+          <h2 id="tech-title" className={styles.techProofTitle}>
+            Engineered for payment failure modes
+          </h2>
+          <p className={styles.techProofSubtitle}>
+            Financial software designed with strict database invariants and zero simulated facades.
           </p>
-          <div
-            style={{
-              display: "flex",
-              gap: "12px",
-              alignItems: "center",
-              flexWrap: "wrap",
-              marginTop: "20px",
-            }}
-          >
-            <Link className="primary-link" href="/demo/qrph">
-              Try QR Ph demo <span aria-hidden="true">→</span>
+        </div>
+
+        <div className={styles.techGrid}>
+          <div className={styles.techItem}>
+            <span className={styles.techCheck} aria-hidden="true">
+              ✓
+            </span>
+            <p className={styles.techText}>Real PayMongo sandbox API & QR Ph generator</p>
+          </div>
+          <div className={styles.techItem}>
+            <span className={styles.techCheck} aria-hidden="true">
+              ✓
+            </span>
+            <p className={styles.techText}>Constant-time HMAC-SHA256 signature verification</p>
+          </div>
+          <div className={styles.techItem}>
+            <span className={styles.techCheck} aria-hidden="true">
+              ✓
+            </span>
+            <p className={styles.techText}>Merchant-scoped idempotency locking (409 Conflict)</p>
+          </div>
+          <div className={styles.techItem}>
+            <span className={styles.techCheck} aria-hidden="true">
+              ✓
+            </span>
+            <p className={styles.techText}>Balanced double-entry ledger: Debits == Credits</p>
+          </div>
+          <div className={styles.techItem}>
+            <span className={styles.techCheck} aria-hidden="true">
+              ✓
+            </span>
+            <p className={styles.techText}>PostgreSQL row-level locking (SELECT ... FOR UPDATE)</p>
+          </div>
+          <div className={styles.techItem}>
+            <span className={styles.techCheck} aria-hidden="true">
+              ✓
+            </span>
+            <p className={styles.techText}>
+              Aggregate refund capacity guards preventing over-refunds
+            </p>
+          </div>
+          <div className={styles.techItem}>
+            <span className={styles.techCheck} aria-hidden="true">
+              ✓
+            </span>
+            <p className={styles.techText}>Automated 3-way reconciliation audit runs</p>
+          </div>
+          <div className={styles.techItem}>
+            <span className={styles.techCheck} aria-hidden="true">
+              ✓
+            </span>
+            <p className={styles.techText}>
+              Durable background workers with Dead Letter Queue (DLQ)
+            </p>
+          </div>
+          <div className={styles.techItem}>
+            <span className={styles.techCheck} aria-hidden="true">
+              ✓
+            </span>
+            <p className={styles.techText}>ISO 8583 financial message parser & bitmap inspector</p>
+          </div>
+        </div>
+      </section>
+
+      {/* 7. Section 6: Final CTA & Minimal Footer */}
+      <section className={styles.finalCtaSection} aria-labelledby="cta-title">
+        <div className={styles.finalCtaContent}>
+          <h2 id="cta-title" className={styles.finalCtaTitle}>
+            See the payment flow yourself.
+          </h2>
+          <p className={styles.finalCtaSubtitle}>
+            Run a genuine PayMongo sandbox transaction with live webhook confirmation.
+          </p>
+          <div className={styles.ctaGroup}>
+            <Link className={styles.primaryCta} href="/demo/qrph">
+              Run QR Ph demo <span aria-hidden="true">→</span>
             </Link>
-            <Link
-              href="/ops"
-              style={{
-                fontSize: "14px",
-                fontWeight: 600,
-                color: "var(--color-cobalt, #0f52ba)",
-                padding: "10px 18px",
-                borderRadius: "6px",
-                border: "1px solid #cbd5e1",
-                textDecoration: "none",
-                background: "#ffffff",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "4px",
-              }}
-            >
+            <Link className={styles.secondaryCta} href="/ops">
               Explore operations <span aria-hidden="true">↗</span>
             </Link>
           </div>
-          <p className="evidence-note" id="reliability" role="status">
-            <span className="status-dot" aria-hidden="true" />
-            <span>
-              PayMongo Test Mode · Signed Webhooks · Balanced Double-Entry Ledger · Hosted
-              PostgreSQL
-            </span>
-          </p>
         </div>
+      </section>
 
-        <figure className="hero-diagram" aria-labelledby="diagram-caption">
-          <div className="diagram-canvas">
-            <Image
-              className="flow-image"
-              src={heroFlow}
-              alt="Payment provider, orchestration service, PostgreSQL database, and ledger connected in sequence."
-              priority
-              unoptimized
-              sizes="(max-width: 800px) 100vw, 55vw"
-            />
-            <p className="diagram-callout callout-provider">
-              <b>Provider event</b>
-              <span>(webhook)</span>
-            </p>
-            <p className="diagram-callout callout-verify">
-              <b>Verify provider evidence</b>
-              <span>before changing state</span>
-            </p>
-            <p className="diagram-callout callout-persist">
-              <b>Persist work</b>
-              <span>(idempotent)</span>
-            </p>
-            <p className="diagram-callout callout-ledger">
-              <b>Post balanced</b>
-              <span>ledger entries</span>
-            </p>
+      <footer className={`page-gutter ${styles.siteFooter}`}>
+        <div className={styles.footerContent}>
+          <div className={styles.footerLeft}>
+            <strong>PayRail PH</strong>
+            <span>·</span>
+            <span>Engineering demonstration for verifiable payment systems</span>
+            <span>·</span>
+            <span>TEST ENVIRONMENT · No real funds</span>
           </div>
-          <figcaption id="diagram-caption" className="diagram-caption">
-            <span>
-              PAYMONGO
-              <br />
-              SANDBOX
-            </span>
-            <span>
-              PAYRAIL PH
-              <br />
-              <small>VERIFICATION · PERSISTENCE · RECONCILIATION</small>
-            </span>
-            <span>
-              INTERNAL
-              <br />
-              LEDGER
-            </span>
-          </figcaption>
-        </figure>
-      </section>
-
-      <section
-        className="page-gutter"
-        id="interactive-demo"
-        aria-label="Interactive QR Ph sandbox demonstration"
-        style={{ padding: "40px 0" }}
-      >
-        <QrPhPaymentFlow />
-      </section>
-
-      <section className="system-section page-gutter" id="system" aria-label="Payment lifecycle">
-        <ol className="flow-steps">
-          {steps.map((step) => (
-            <li key={step.number}>
-              <div className="step-heading">
-                <span className="step-number">{step.number}</span>
-                <h3>{step.title}</h3>
-                {step.number !== "4" && (
-                  <span className="step-arrow" aria-hidden="true">
-                    →
-                  </span>
-                )}
-              </div>
-              <span className="step-symbol" aria-hidden="true">
-                {step.symbol}
-              </span>
-              <p>{step.detail}</p>
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      <footer className="site-footer page-gutter" id="access">
-        <div className="footer-content">
-          <p>Engineering for verifiable payments.</p>
-          <div className="footer-meta">
-            <span>PayRail PH</span>
-            <span aria-hidden="true">·</span>
-            <span>PayMongo test mode</span>
-            <span aria-hidden="true">·</span>
-            <span>Sandbox only</span>
-          </div>
-          <p className="operator-note">
-            <b>Private operations</b> require authenticated operator access.{" "}
-            <Link
-              href="/ops"
-              style={{
-                color: "var(--color-cobalt, #0f52ba)",
-                textDecoration: "underline",
-                marginLeft: "4px",
-              }}
-            >
-              Launch Console ↗
+          <div className={styles.footerLinks}>
+            <Link className={styles.footerLink} href="/demo/qrph">
+              Demo
             </Link>
-          </p>
+            <Link className={styles.footerLink} href="/ops">
+              Operations
+            </Link>
+            <Link className={styles.footerLink} href="/ops/reliability-lab">
+              Reliability
+            </Link>
+            <Link className={styles.footerLink} href="/ops/iso8583">
+              ISO 8583
+            </Link>
+          </div>
         </div>
-        <Image
-          className="mountain-art"
-          src={mountainHorizon}
-          alt=""
-          aria-hidden="true"
-          unoptimized
-          sizes="100vw"
-        />
       </footer>
     </main>
   );
