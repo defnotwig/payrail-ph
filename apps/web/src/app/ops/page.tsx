@@ -152,26 +152,40 @@ export default function OpsOverviewPage() {
         </div>
       </div>
 
-      {/* Network or Server Error Banner */}
-      {error && (
-        <div
+      {/* Exception Triage Panel (Von Restorff Effect & Epistemic Honesty) */}
+      {error ? (
+        <section
           role="alert"
           style={{
-            padding: "12px 16px",
-            borderRadius: "6px",
-            border: "1px solid #fecaca",
-            background: "#fef2f2",
-            color: "#991b1b",
-            fontSize: "13px",
-            marginBottom: "16px",
+            background: "#fffbeb",
+            border: "1px solid #fde68a",
+            borderRadius: "8px",
+            padding: "14px 18px",
+            marginBottom: "24px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "6px",
           }}
         >
-          <strong>Operational Metrics Unavailable:</strong> {error}
-        </div>
-      )}
-
-      {/* Exception Triage Panel (Von Restorff Effect) */}
-      {loading ? (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              fontWeight: 700,
+              fontSize: "13.5px",
+              color: "#92400e",
+            }}
+          >
+            <span aria-hidden="true">⚠️</span>
+            <span>Operational visibility degraded</span>
+          </div>
+          <p style={{ margin: 0, fontSize: "13px", color: "#78350f" }}>
+            The operations console could not retrieve metrics from the core service ({error}).
+            Telemetry for payment pipelines and provider health is currently unavailable.
+          </p>
+        </section>
+      ) : loading ? (
         <Skeleton height="52px" borderRadius="8px" style={{ marginBottom: "24px" }} />
       ) : data?.needsAttention && data.needsAttention.length > 0 ? (
         <section className={styles.triageBanner} aria-label="Operational Exceptions">
@@ -213,7 +227,7 @@ export default function OpsOverviewPage() {
             ))}
           </ul>
         </section>
-      ) : (
+      ) : data ? (
         <div className={styles.triageBannerHealthy} role="status">
           <div className={styles.triageHealthyText}>
             <span aria-hidden="true">✓</span>
@@ -221,7 +235,7 @@ export default function OpsOverviewPage() {
           </div>
           <span className={styles.triageHealthyMeta}>Double-entry ledger verified balanced</span>
         </div>
-      )}
+      ) : null}
 
       {/* Primary KPI Metric Grid (Hick's Law: 4 core metrics) */}
       <MetricGrid>
@@ -269,7 +283,7 @@ export default function OpsOverviewPage() {
             />
 
             <MetricCard
-              label="P95 Settlement Latency"
+              label="P95 Confirmation Latency"
               value={
                 data && data.p95LatencyMs !== null ? (
                   `${data.p95LatencyMs}ms`
@@ -298,7 +312,7 @@ export default function OpsOverviewPage() {
               Active circuit breaker states and 24-hour upstream telemetry.
             </p>
           </div>
-          {data?.providerHealth && (
+          {data?.providerHealth ? (
             <span
               className={
                 data.providerHealth.circuitState === "CLOSED"
@@ -307,6 +321,20 @@ export default function OpsOverviewPage() {
               }
             >
               CIRCUIT {data.providerHealth.circuitState}
+            </span>
+          ) : (
+            <span
+              style={{
+                fontSize: "11.5px",
+                fontWeight: 700,
+                padding: "3px 8px",
+                borderRadius: "4px",
+                background: "#f1f5f9",
+                color: "#475569",
+                border: "1px solid #e2e8f0",
+              }}
+            >
+              CIRCUIT UNKNOWN
             </span>
           )}
         </div>
@@ -340,7 +368,9 @@ export default function OpsOverviewPage() {
             <div style={{ fontSize: "16px", fontWeight: 700, color: "#0f172a", marginTop: "4px" }}>
               PayMongo QR Ph
             </div>
-            <span style={{ fontSize: "12px", color: "#475569" }}>Test Mode Simulator Active</span>
+            <span style={{ fontSize: "12px", color: "#475569" }}>
+              {data ? "Test Mode Simulator Active" : "Telemetry Unavailable"}
+            </span>
           </div>
 
           <div
@@ -363,10 +393,10 @@ export default function OpsOverviewPage() {
               24h Gateway Attempts
             </span>
             <div style={{ fontSize: "16px", fontWeight: 700, color: "#0f172a", marginTop: "4px" }}>
-              {data?.providerHealth ? data.providerHealth.totalAttempts24h : 0}
+              {data?.providerHealth ? data.providerHealth.totalAttempts24h : "—"}
             </div>
             <span style={{ fontSize: "12px", color: "#475569" }}>
-              Failures: {data?.providerHealth ? data.providerHealth.failedAttempts24h : 0}
+              Failures: {data?.providerHealth ? data.providerHealth.failedAttempts24h : "—"}
             </span>
           </div>
 
@@ -390,7 +420,7 @@ export default function OpsOverviewPage() {
               Failure Rate
             </span>
             <div style={{ fontSize: "16px", fontWeight: 700, color: "#0f172a", marginTop: "4px" }}>
-              {data?.providerHealth ? `${data.providerHealth.failureRate.toFixed(1)}%` : "0.0%"}
+              {data?.providerHealth ? `${data.providerHealth.failureRate.toFixed(1)}%` : "—"}
             </div>
             <span style={{ fontSize: "12px", color: "#475569" }}>Threshold: 50% trip limit</span>
           </div>

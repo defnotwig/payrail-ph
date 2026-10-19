@@ -28,6 +28,7 @@
   height: 100vh;
   z-index: 40;
   transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow-x: visible;
   overflow-y: auto;
 }
 
@@ -36,34 +37,43 @@
 }
 
 .sidebarHeader {
-  padding: 16px;
+  height: 64px;
+  padding: 0 16px;
   border-bottom: 1px solid var(--color-border, #e2e8f0);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.sidebarCollapsed .sidebarHeader {
+  padding: 0 16px;
+  justify-content: center;
 }
 
 .sidebarBrand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   text-decoration: none;
   min-width: 0;
 }
 
+.sidebarCollapsed .sidebarBrand {
+  gap: 0;
+  justify-content: center;
+}
+
 .sidebarBrandLogo {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
   background: var(--color-brand, #0f52ba);
   color: #ffffff;
-  font-weight: 800;
-  font-size: 13px;
   display: flex;
   align-items: center;
   justify-content: center;
-  letter-spacing: -0.03em;
+  flex: 0 0 32px;
   flex-shrink: 0;
 }
 
@@ -71,6 +81,20 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transition:
+    opacity 0.15s ease,
+    max-width 0.2s ease;
+}
+
+.sidebarCollapsed .sidebarBrandTitles {
+  max-width: 0;
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  margin: 0;
+  padding: 0;
 }
 
 .sidebarBrandMain {
@@ -93,24 +117,31 @@
 }
 
 .sidebarCollapseBtn {
-  background: transparent;
+  position: absolute;
+  right: -12px;
+  top: 20px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #ffffff;
   border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   color: var(--color-text-secondary, #475569);
-  width: 26px;
-  height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  z-index: 50;
   padding: 0;
-  transition: background 0.15s ease;
+  transition: all 0.15s ease;
   flex-shrink: 0;
 }
 
 .sidebarCollapseBtn:hover {
-  background: #f1f5f9;
-  color: #0f172a;
+  background: #f8fafc;
+  color: var(--color-brand, #0f52ba);
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
 }
 
 .sidebarWorkspaceCard {
@@ -264,6 +295,15 @@
 .sidebarCollapsed .sidebarNavBadge,
 .sidebarCollapsed .sidebarFooter {
   display: none;
+}
+
+.sidebarCollapsed .sidebarNavLink {
+  justify-content: center;
+  padding: 10px 0;
+}
+
+.sidebarCollapsed .sidebarNavIcon {
+  margin: 0;
 }
 
 .sidebarHealthIndicator {
@@ -450,6 +490,19 @@
   height: 6px;
   border-radius: 50%;
   background: #94a3b8;
+}
+
+.circuitPillUnavailable {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.circuitPillUnavailable .circuitDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #dc2626;
 }
 
 .headerReturnLink {
