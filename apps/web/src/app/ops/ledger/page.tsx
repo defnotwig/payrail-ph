@@ -98,12 +98,12 @@ export default function LedgerPage() {
   return (
     <div>
       <PageHeader
-        title="Immutable Double-Entry Ledger"
-        subtitle="Mathematical equality engine enforcing fundamental conservation: Total Debits === Total Credits per transaction (ISO 4217 PHP)."
+        title="Ledger"
+        subtitle="Review the financial entries created by payments and refunds."
         actions={
           <StatusBadge
             status={isBalanced ? "SUCCEEDED" : "FAILED"}
-            customLabel={isBalanced ? "INVARIANT: 100% BALANCED" : "IMBALANCE DETECTED"}
+            customLabel={isBalanced ? "Balanced ✓" : "Imbalance detected"}
           />
         }
       />
@@ -183,8 +183,7 @@ export default function LedgerPage() {
       {/* Chart of Accounts */}
       <div className={styles.card}>
         <div className={styles.cardHeader}>
-          <h2 className={styles.cardTitle}>Chart of Accounts (payrail_private.accounts)</h2>
-          <span className={styles.badgePill}>POSTGRESQL CONSTRAINTS</span>
+          <h2 className={styles.cardTitle}>Chart of Accounts</h2>
         </div>
         <div className={styles.tableWrapper}>
           <table className={styles.table}>

@@ -45,8 +45,13 @@ export default function CardsOpsPage() {
     <div>
       <PageHeader
         title="Cards & 3-D Secure Educational Simulator"
-        subtitle="PCI DSS-conscious architecture demonstrating tokenization, PAN masking, 3DS challenges, and the Auth/Capture/Void lifecycle."
-        actions={<StatusBadge status="SUCCEEDED" customLabel="PCI SCOPE: LEVEL 1 CONSCIOUS" />}
+        subtitle="PCI-conscious architecture designed to minimize PCI scope. Demonstrates simulated tokenization, PAN masking, 3DS challenge workflows, and the Auth/Capture/Void lifecycle."
+        actions={
+          <StatusBadge
+            status="SUCCEEDED"
+            customLabel="Educational sandbox · Zero card data stored"
+          />
+        }
       />
 
       <div className={styles.gridTwoCol}>

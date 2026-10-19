@@ -106,15 +106,15 @@ export default function DurableJobsPage() {
   return (
     <div>
       <PageHeader
-        title="Durable Background Jobs & Dead Letter Queue"
-        subtitle="At-least-once transactional execution with lease fencing, exponential backoff, and poisoned-pill DLQ quarantine."
+        title="Background jobs"
+        subtitle="Monitor asynchronous tasks, retry schedules, and failed jobs requiring review."
         actions={
           <StatusBadge
             status={activeDlqCount === 0 ? "SUCCEEDED" : "FAILED"}
             customLabel={
               activeDlqCount === 0
-                ? "DLQ HEALTHY: 0 POISON PILLS"
-                : `DLQ ALERT: ${activeDlqCount} POISON PILLS`
+                ? "Jobs healthy · 0 failed"
+                : `${activeDlqCount} failed jobs requiring review`
             }
           />
         }
@@ -196,10 +196,10 @@ export default function DurableJobsPage() {
       {/* Dead Letter Queue Section */}
       <div className={styles.card}>
         <div className={styles.cardHeader}>
-          <h2 className={styles.cardTitle}>
-            Dead Letter Queue (payrail_private.dead_letter_queue)
-          </h2>
-          <span className={styles.badgeDanger}>ISOLATED EXCEPTIONS</span>
+          <h2 className={styles.cardTitle}>Failed Jobs Requiring Review (DLQ)</h2>
+          <span className={activeDlqCount === 0 ? styles.badgeSuccess : styles.badgeDanger}>
+            {activeDlqCount === 0 ? "0 REQUIRING REVIEW" : `${activeDlqCount} REQUIRING REVIEW`}
+          </span>
         </div>
 
         <div className={styles.tableWrapper}>

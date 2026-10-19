@@ -76,9 +76,9 @@ export default function DeveloperPlatformPage() {
   return (
     <div>
       <PageHeader
-        title="Developer Platform & API Credentials"
-        subtitle="Cryptographically hashed API secrets, scoped permissions, and outward merchant webhook dispatchers with SSRF isolation."
-        actions={<StatusBadge status="SUCCEEDED" customLabel="SHA-256 HASHED SECRETS" />}
+        title="Webhooks & API"
+        subtitle="Manage merchant API keys, configure webhook endpoints, and inspect event deliveries."
+        actions={<StatusBadge status="SUCCEEDED" customLabel="API Keys Hashed (SHA-256)" />}
       />
 
       {error && (
@@ -101,9 +101,7 @@ export default function DeveloperPlatformPage() {
       {/* API Keys Table */}
       <div className={styles.card}>
         <div className={styles.cardHeader}>
-          <h2 className={styles.cardTitle}>
-            Merchant API Keys (payrail_private.merchant_api_keys)
-          </h2>
+          <h2 className={styles.cardTitle}>Merchant API Keys</h2>
           <span className={styles.badgePill}>SCOPED SECRETS</span>
         </div>
 

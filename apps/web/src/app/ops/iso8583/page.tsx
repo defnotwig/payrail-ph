@@ -123,8 +123,10 @@ export default function Iso8583LabPage() {
     <div>
       <PageHeader
         title="ISO 8583 Financial Message Protocol Lab"
-        subtitle="Interactive ISO 8583 message packer, unpacker, primary bitmap analyzer, and financial field mapper."
-        actions={<StatusBadge status="SUCCEEDED" customLabel="ISO 8583:1987 / 1993 STANDARD" />}
+        subtitle="ISO 8583 is a financial messaging format commonly used by payment switches and card networks. Explore sample authorization, message packing, and field parsing in this sandbox lab."
+        actions={
+          <StatusBadge status="SUCCEEDED" customLabel="Educational sandbox · Simulated switch" />
+        }
       />
 
       <div className={styles.gridTwoCol}>

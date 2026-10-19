@@ -79,16 +79,17 @@ export default function ReconciliationPage() {
   return (
     <div>
       <PageHeader
-        title="Automated 3-Way Reconciliation & Settlement"
-        subtitle="Continuous invariant verification across Internal Payment Intents, Downstream Provider Evidence, and Internal Ledger."
+        title="Reconciliation"
+        subtitle="Compare provider activity with PayRail records and investigate differences."
         actions={
           <button
             type="button"
             className={styles.buttonPrimary}
             onClick={handleRunRecon}
             disabled={isRunning || loading}
+            style={{ minHeight: "40px" }}
           >
-            {isRunning ? "Running 3-Way Match..." : "⚡ Run Daily Reconciliation"}
+            {isRunning ? "Running reconciliation…" : "Run reconciliation"}
           </button>
         }
       />
