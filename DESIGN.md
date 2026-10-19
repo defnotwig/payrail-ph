@@ -1,6 +1,6 @@
-# PayRail PH — Operations Experience V3 Design System (DESIGN.md)
+# PayRail PH — Operations Experience V4 Design System (DESIGN.md)
 
-**Version:** 3.0.0  
+**Version:** 4.0.0  
 **Project Classification:** Philippine Financial Infrastructure & Payment Orchestration  
 **Stitch MCP Project:** `https://stitch.google.com/projects/9384472954066961863` (PayRail PH — Operations V3)  
 **Influences:** Stripe Dashboard & Developer Tools, Mercury, Modern Treasury, BSP QR Ph Standards  
@@ -144,3 +144,54 @@ A light-first, clinical slate foundation:
 - **Metrics:** `MetricCard`, `MetricGrid`
 - **Containers:** `Dialog`, `Drawer`, `Tabs`, `DetailSection`, `EmptyState`, `ErrorState`, `Skeleton`
 - **Diagnostics:** `CodeBlock`, `JsonViewer`
+
+---
+
+## 8. Version 4.0.0 Specifications
+
+### 8.1 Geometric "PR" Rail Monogram Brand Identity
+- **Monogram Architecture:** The twin parallel rails represent Philippine retail settlement infrastructure (InstaPay real-time credit transfer and PESONet batch settlement), routing through PayRail's automated switch.
+- **Glyph Integration:** 
+  - Inner rail sweeps through upper bowl and returns horizontally to stem at $y=14.0$, creating a closed letter **P**.
+  - Outer rail arches concentric to the inner rail and diverges at the turnout waistline ($y=18.5$) into a $45^\circ$ diagonal leg ending at $(25.5, 27.5)$, creating a crisp letter **R**.
+- **Vector Master Assets:**
+  - `/public/brand/payrail-mark.svg` (32×32 viewBox, 1-color capable `#0f52ba` / `currentColor`)
+  - `/public/brand/payrail-wordmark.svg` (144×32 viewBox, DM Sans 700 with dark/light mode `tspan` fills)
+  - `/public/brand/payrail-lockup.svg` (184×32 viewBox, horizontal lockup)
+  - `/public/favicon.svg` (32×32 viewBox, `#0f52ba` rounded container with crisp white monogram)
+
+### 8.2 Collapsed Sidebar Overlap Invariant
+- **Geometry:** 240px expanded $\rightarrow$ 64px collapsed width.
+- **Seam-Mounted Toggle Button:** The collapse button floats directly on the sidebar border seam (`right: -12px; width: 24px; height: 24px; border-radius: 50%`). Because it does not occupy horizontal space in `.sidebarHeader`, the 32×32 logo mark is centered at $x=[16\text{px}, 48\text{px}]$ across all viewport widths.
+- **Zero Collision Transition:** Brand text and subtitle use `max-width: 0; opacity: 0; pointer-events: none; visibility: hidden;` in collapsed mode, eliminating text wrapping or under-logo stacking at intermediate widths (64, 80, 160, 240px).
+
+### 8.3 Truthful Aggregated Health Model
+- **Status State Machine:** Components report `HEALTHY`, `DEGRADED`, `UNAVAILABLE`, or `UNKNOWN`.
+- **Epistemic Invariant:** Health requires fresh, verifiable telemetry. Never default to `HEALTHY`.
+- **Decoupled Gateway Observation:** When the Web client cannot reach the API Gateway:
+  - API Gateway = `UNAVAILABLE`
+  - Downstream Database, PayMongo, Webhook Ingestion, and Workers = `UNKNOWN`
+  - Header pill renders `PayMongo: UNAVAILABLE` or `Telemetry: UNKNOWN` in calm amber/rose/slate (never green).
+  - Triage panel renders `Operational visibility degraded` with specific diagnostic details.
+- **Nominal Banner Gate:** The banner `"All payment pipelines nominal · 0 invariant violations · 0 DLQ items"` renders **only** when all components have verified fresh positive telemetry, DLQ is 0, and the double-entry ledger is balanced.
+
+### 8.4 Confirmation Latency Metric Formalization
+- **Correct Naming:** `P95 Confirmation Latency (webhook-to-balanced-ledger)`.
+- **Financial Rationale:** Distinguishes real-time payment confirmation and balanced ledger recording from interbank clearing (T+1/T+2 multilateral settlement).
+- **Authoritative SQL Computation:**
+  ```sql
+  SELECT
+    count(*)::int AS sample_size,
+    percentile_cont(0.50) WITHIN GROUP (
+      ORDER BY extract(epoch from (p.updated_at - p.created_at)) * 1000
+    )::int AS p50_confirmation_latency_ms,
+    percentile_cont(0.95) WITHIN GROUP (
+      ORDER BY extract(epoch from (p.updated_at - p.created_at)) * 1000
+    )::int AS p95_confirmation_latency_ms
+  FROM payrail_private.payment_intents p
+  WHERE p.merchant_id = $1
+    AND p.state = 'SUCCEEDED'
+    AND p.created_at >= $2;
+  ```
+  If `sample_size = 0`, the metric renders `—`, never falling back to fabricated numbers.
+

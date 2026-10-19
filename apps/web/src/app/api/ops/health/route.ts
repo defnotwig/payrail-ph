@@ -1,21 +1,19 @@
 import { type NextRequest, NextResponse } from "next/server";
+import {
+  resolveInternalApiUrl,
+  resolveDemoMerchantApiKey,
+  formatRouteError,
+} from "../../../../lib/server-api-config";
 
 export async function GET(request: NextRequest) {
+  const requestId =
+    request.headers.get("x-request-id") ||
+    request.headers.get("x-correlation-id") ||
+    crypto.randomUUID();
+
   try {
-    const apiBase = (
-      process.env.INTERNAL_API_URL ||
-      process.env.API_BASE_URL ||
-      process.env.NEXT_PUBLIC_API_BASE_URL ||
-      "http://127.0.0.1:4000"
-    ).replace(/\/+$/, "");
-
-    const apiKey =
-      process.env.DEMO_MERCHANT_API_KEY || "sk_test_payrail_demo_merchant_default_9f8e7d6c5b4a";
-
-    const requestId =
-      request.headers.get("x-request-id") ||
-      request.headers.get("x-correlation-id") ||
-      crypto.randomUUID();
+    const apiBase = resolveInternalApiUrl();
+    const apiKey = resolveDemoMerchantApiKey();
 
     const response = await fetch(`${apiBase}/ops/health`, {
       method: "GET",
@@ -37,14 +35,10 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to communicate with health service";
-    return NextResponse.json(
-      {
-        message: "We couldn't reach the system health service.",
-        detail: message,
-      },
-      { status: 502 },
+    return formatRouteError(
+      error,
+      "System health telemetry unavailable. Could not communicate with upstream health service.",
+      requestId,
     );
   }
 }
