@@ -168,17 +168,12 @@ export default function RefundsPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Refunds & Capacity Protection"
-        subtitle="Strict capacity checking (SELECT FOR UPDATE) preventing over-refunds and posting compensating ledger journals."
-        actions={<StatusBadge status="SUCCEEDED" customLabel="OVER-REFUND INVARIANT: ACTIVE" />}
-      />
+      <PageHeader title="Refunds" subtitle="Review and issue refunds for successful payments." />
 
       <div className={styles.gridTwoCol}>
         <div className={styles.card}>
           <div className={styles.cardHeader}>
-            <h2 className={styles.cardTitle}>Issue Controlled Refund</h2>
-            <span className={styles.badgePill}>CAPACITY GUARD</span>
+            <h2 className={styles.cardTitle}>Issue Refund</h2>
           </div>
 
           <form
@@ -236,7 +231,7 @@ export default function RefundsPage() {
                     fontWeight: 600,
                   }}
                 >
-                  Payment Total
+                  Original payment
                 </label>
                 <input
                   id="payment-total-input"
@@ -258,7 +253,7 @@ export default function RefundsPage() {
                     fontWeight: 600,
                   }}
                 >
-                  Already Refunded
+                  Already refunded
                 </label>
                 <input
                   id="already-refunded-input"
@@ -280,7 +275,7 @@ export default function RefundsPage() {
                     fontWeight: 600,
                   }}
                 >
-                  Remaining Capacity
+                  Available to refund
                 </label>
                 <input
                   id="remaining-capacity-input"
@@ -379,43 +374,72 @@ export default function RefundsPage() {
             <button
               type="submit"
               disabled={isSubmitting || totalCapacity <= 0}
-              className={styles.buttonDanger}
+              className={styles.buttonPrimary}
               style={{ minHeight: "44px", width: "100%", opacity: isSubmitting ? 0.7 : 1 }}
             >
-              {isSubmitting ? "Processing Refund…" : "Review & Issue Compensating Refund"}
+              {isSubmitting ? "Processing…" : "Review refund"}
             </button>
           </form>
         </div>
 
         <div className={styles.card}>
           <div className={styles.cardHeader}>
-            <h2 className={styles.cardTitle}>Compensating Accounting Architecture</h2>
-            <span className={styles.badgePill}>DOUBLE-ENTRY RULE</span>
+            <h2 className={styles.cardTitle}>Refund Safeguards</h2>
           </div>
           <p
             style={{
               fontSize: "13px",
               color: "var(--color-text-secondary, #475569)",
               lineHeight: 1.6,
+              marginBottom: "16px",
             }}
           >
-            Under GAAP and modern fintech engineering, payment records are{" "}
-            <strong>immutable</strong>. A refund does not delete or overwrite the original payment.
+            Refunds are cryptographically validated against original payment records. The backend
+            enforces strict transactional capacity checks to prevent over-refunding and posts
+            balanced compensating ledger entries.
           </p>
-          <div className={styles.codeBlock} style={{ marginBottom: "14px" }}>
-            {`-- Original Payment Success:
-DR 1000 Cash at PayMongo         ₱1.00
-CR 2000 Merchant Settlement      ₱0.97
-CR 4000 Platform Fee Revenue     ₱0.03
-
--- Compensating Partial Refund:
+          <details
+            style={{
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: "6px",
+              padding: "12px",
+              fontSize: "13px",
+            }}
+          >
+            <summary
+              style={{
+                cursor: "pointer",
+                fontWeight: 600,
+                color: "var(--color-brand, #0f52ba)",
+                outline: "none",
+              }}
+            >
+              How refund protection works ▾
+            </summary>
+            <div style={{ marginTop: "12px" }}>
+              <p
+                style={{
+                  fontSize: "12px",
+                  color: "var(--color-text-secondary, #475569)",
+                  lineHeight: 1.5,
+                  marginBottom: "8px",
+                }}
+              >
+                Under GAAP, payment records are immutable. A refund creates a forward compensating
+                journal:
+              </p>
+              <div className={styles.codeBlock} style={{ marginBottom: "10px", fontSize: "11px" }}>
+                {`-- Compensating Refund Journal:
 DR 2000 Merchant Settlement      ₱1.00
 CR 1000 Cash at PayMongo         ₱1.00`}
-          </div>
-          <p style={{ fontSize: "12px", color: "var(--color-text-muted, #64748b)" }}>
-            The ledger remains mathematically conserved: net balance is updated via forward
-            additions only.
-          </p>
+              </div>
+              <p style={{ fontSize: "11.5px", color: "#64748b", margin: 0 }}>
+                Transactional row locking guarantees that parallel refund requests cannot exceed the
+                original authorized amount.
+              </p>
+            </div>
+          </details>
         </div>
       </div>
 
@@ -576,7 +600,9 @@ CR 1000 Cash at PayMongo         ₱1.00`}
               onClick={handleExecuteRefund}
               style={{ minHeight: "44px" }}
             >
-              {isSubmitting ? "Posting…" : "Confirm & Post Refund"}
+              {isSubmitting
+                ? "Posting…"
+                : `Confirm ₱${parseFloat(refundAmount || "0").toFixed(2)} refund`}
             </button>
           </div>
         </div>
