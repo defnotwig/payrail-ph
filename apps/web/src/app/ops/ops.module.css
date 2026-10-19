@@ -560,6 +560,39 @@
   }
 }
 
+@media (max-width: 640px) {
+  .commandBarForm {
+    display: none;
+  }
+
+  .headerBreadcrumb {
+    display: none;
+  }
+
+  .headerActions {
+    gap: 8px;
+    margin-left: auto;
+  }
+
+  .circuitLabel {
+    display: none;
+  }
+
+  .circuitPill {
+    padding: 6px;
+  }
+
+  .badgeSandbox {
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+
+  .headerReturnLink {
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+}
+
 .container {
   min-height: 100vh;
   background-color: var(--color-canvas, #f8fafc);
