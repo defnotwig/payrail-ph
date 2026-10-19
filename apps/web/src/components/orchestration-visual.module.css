@@ -1,0 +1,173 @@
+.container {
+  width: 100%;
+  max-width: 580px;
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 12px;
+  padding: 24px 20px;
+  box-shadow:
+    0 10px 25px -5px rgba(15, 23, 42, 0.4),
+    0 8px 10px -6px rgba(15, 23, 42, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.visualHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #1e293b;
+  padding-bottom: 12px;
+}
+
+.visualTitle {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.liveBadge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #34d399;
+}
+
+.liveDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 8px #34d399;
+  animation: pulseDot 2s infinite ease-in-out;
+}
+
+.diagramSvg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Node styles */
+.nodeBox {
+  fill: #1e293b;
+  stroke: #334155;
+  stroke-width: 1.5;
+  rx: 6;
+}
+
+.nodeBoxCenter {
+  fill: #0c4196;
+  stroke: #38bdf8;
+  stroke-width: 1.5;
+  rx: 8;
+}
+
+.nodeBoxActive {
+  stroke: #34d399;
+  stroke-width: 1.5;
+}
+
+.nodeText {
+  fill: #f8fafc;
+  font-size: 11px;
+  font-weight: 600;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  font-family: inherit;
+}
+
+.nodeSubtext {
+  fill: #94a3b8;
+  font-size: 9px;
+  font-weight: 500;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  font-family: inherit;
+}
+
+/* Flow paths */
+.connectionLine {
+  stroke: #334155;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+}
+
+.activeLine {
+  stroke: #38bdf8;
+  stroke-width: 2;
+  stroke-dasharray: 6 6;
+  animation: flowDashes 1.2s linear infinite;
+}
+
+/* Pulse indicator along path */
+.pulseParticle {
+  fill: #38bdf8;
+  filter: drop-shadow(0 0 4px #38bdf8);
+}
+
+.pulseParticleSuccess {
+  fill: #34d399;
+  filter: drop-shadow(0 0 4px #34d399);
+}
+
+.statusIndicator {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #0b1120;
+  border-radius: 6px;
+  border: 1px solid #1e293b;
+  font-size: 11px;
+}
+
+.statusLabel {
+  color: #64748b;
+}
+
+.statusValue {
+  color: #f8fafc;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.statusValueSuccess {
+  color: #34d399;
+}
+
+@keyframes pulseDot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+}
+
+@keyframes flowDashes {
+  from {
+    stroke-dashoffset: 24;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .liveDot,
+  .activeLine {
+    animation: none;
+  }
+}
