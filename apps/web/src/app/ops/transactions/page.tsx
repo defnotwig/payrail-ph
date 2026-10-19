@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Amount, DetailList, PageHeader, StatusBadge } from "../../../components/ui";
 import styles from "../ops.module.css";
 
@@ -9,59 +10,138 @@ interface Transaction {
   orderNumber: string;
   amountMinor: number;
   method: "qrph" | "card";
-  state: "SUCCEEDED" | "AWAITING_PAYMENT" | "FAILED" | "REFUNDED";
+  state: "SUCCEEDED" | "AWAITING_PAYMENT" | "FAILED" | "REFUNDED" | "PROCESSING" | "EXPIRED";
+  provider: string;
   idempotencyKey: string;
   providerEventId: string;
   createdAt: string;
 }
 
+const DEFAULT_TRANSACTIONS: Transaction[] = [
+  {
+    id: "pi_test_0192a831001",
+    orderNumber: "ORD-20261018-01",
+    amountMinor: 50000,
+    method: "qrph",
+    state: "SUCCEEDED",
+    provider: "PayMongo Test",
+    idempotencyKey: "idem_order_01_99182a",
+    providerEventId: "evt_paymongo_0192a831",
+    createdAt: "Today, 17:15:20",
+  },
+  {
+    id: "pi_test_0192a832002",
+    orderNumber: "ORD-20261018-02",
+    amountMinor: 125000,
+    method: "card",
+    state: "SUCCEEDED",
+    provider: "PayMongo Test",
+    idempotencyKey: "idem_order_02_44192b",
+    providerEventId: "evt_paymongo_0192a832",
+    createdAt: "Today, 16:50:11",
+  },
+  {
+    id: "pi_test_0192a833003",
+    orderNumber: "ORD-20261018-03",
+    amountMinor: 30000,
+    method: "qrph",
+    state: "AWAITING_PAYMENT",
+    provider: "PayMongo Test",
+    idempotencyKey: "idem_order_03_77182c",
+    providerEventId: "evt_pending_qr_scan",
+    createdAt: "Today, 16:42:00",
+  },
+  {
+    id: "pi_test_0192a834004",
+    orderNumber: "ORD-20261018-04",
+    amountMinor: 89000,
+    method: "card",
+    state: "FAILED",
+    provider: "PayMongo Test",
+    idempotencyKey: "idem_order_04_33192d",
+    providerEventId: "evt_card_declined_51",
+    createdAt: "Today, 15:30:18",
+  },
+];
+
 export default function TransactionsPage() {
+  const [transactions, setTransactions] = useState<Transaction[]>(DEFAULT_TRANSACTIONS);
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [filterState, setFilterState] = useState<string>("ALL");
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
-  const transactions: Transaction[] = [
-    {
-      id: "pi_test_0192a831001",
-      orderNumber: "ORD-20261018-01",
-      amountMinor: 50000,
-      method: "qrph",
-      state: "SUCCEEDED",
-      idempotencyKey: "idem_order_01_99182a",
-      providerEventId: "evt_paymongo_0192a831",
-      createdAt: "Today, 17:15:20",
-    },
-    {
-      id: "pi_test_0192a832002",
-      orderNumber: "ORD-20261018-02",
-      amountMinor: 125000,
-      method: "card",
-      state: "SUCCEEDED",
-      idempotencyKey: "idem_order_02_44192b",
-      providerEventId: "evt_paymongo_0192a832",
-      createdAt: "Today, 16:50:11",
-    },
-    {
-      id: "pi_test_0192a833003",
-      orderNumber: "ORD-20261018-03",
-      amountMinor: 30000,
-      method: "qrph",
-      state: "AWAITING_PAYMENT",
-      idempotencyKey: "idem_order_03_77182c",
-      providerEventId: "evt_pending_qr_scan",
-      createdAt: "Today, 16:42:00",
-    },
-    {
-      id: "pi_test_0192a834004",
-      orderNumber: "ORD-20261018-04",
-      amountMinor: 89000,
-      method: "card",
-      state: "FAILED",
-      idempotencyKey: "idem_order_04_33192d",
-      providerEventId: "evt_card_declined_51",
-      createdAt: "Today, 15:30:18",
-    },
-  ];
+  useEffect(() => {
+    async function loadData() {
+      const mergedMap = new Map<string, Transaction>();
+
+      // 1. Seed defaults
+      for (const t of DEFAULT_TRANSACTIONS) {
+        mergedMap.set(t.id, t);
+      }
+
+      // 2. Fetch live transactions from backend if available
+      try {
+        const res = await fetch("/api/payments");
+        if (res.ok) {
+          const json = await res.json();
+          const items = Array.isArray(json) ? json : json.data;
+          if (Array.isArray(items)) {
+            for (const item of items) {
+              mergedMap.set(item.id, {
+                id: item.id,
+                orderNumber: item.orderNumber || `ORD-${item.id.substring(0, 8)}`,
+                amountMinor: Number(item.amountMinor) || 100,
+                method: (item.paymentMethod === "card" ? "card" : "qrph") as "qrph" | "card",
+                state: item.state || "SUCCEEDED",
+                provider: "PayMongo Test",
+                idempotencyKey: item.idempotencyKey || `idem_${item.id.substring(0, 8)}`,
+                providerEventId: item.providerPaymentIntentId || `evt_${item.id.substring(0, 8)}`,
+                createdAt: item.createdAt
+                  ? new Date(item.createdAt).toLocaleTimeString()
+                  : "Just now",
+              });
+            }
+          }
+        }
+      } catch {
+        // Backend offline or unreachable
+      }
+
+      // 3. Merge locally recorded demo transactions from sessionStorage
+      try {
+        const raw = sessionStorage.getItem("payrail_recorded_transactions");
+        if (raw) {
+          const list = JSON.parse(raw);
+          if (Array.isArray(list)) {
+            for (const item of list) {
+              if (item?.id) {
+                mergedMap.set(item.id, {
+                  id: item.id,
+                  orderNumber: item.orderNumber || `ORD-${item.id.substring(0, 8)}`,
+                  amountMinor: Number(item.amountMinor) || 100,
+                  method: "qrph",
+                  state: item.state || "SUCCEEDED",
+                  provider: "PayMongo Test",
+                  idempotencyKey: `idem_${item.id.substring(0, 8)}`,
+                  providerEventId: item.providerPaymentIntentId || `evt_${item.id.substring(0, 8)}`,
+                  createdAt: item.createdAt
+                    ? new Date(item.createdAt).toLocaleTimeString()
+                    : "Just now",
+                });
+              }
+            }
+          }
+        }
+      } catch {
+        // session storage unavailable
+      }
+
+      const list = Array.from(mergedMap.values());
+      setTransactions(list);
+    }
+
+    loadData();
+  }, []);
 
   const filtered = transactions.filter((t) =>
     filterState === "ALL" ? true : t.state === filterState,
@@ -106,6 +186,7 @@ export default function TransactionsPage() {
               <option value="ALL">All States ({transactions.length})</option>
               <option value="SUCCEEDED">Succeeded</option>
               <option value="AWAITING_PAYMENT">Awaiting Payment</option>
+              <option value="PROCESSING">Processing</option>
               <option value="FAILED">Failed</option>
             </select>
           </div>
@@ -158,12 +239,12 @@ export default function TransactionsPage() {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th scope="col">Intent & Order</th>
-                  <th scope="col" className={styles.numCol}>
-                    Amount
-                  </th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Amount</th>
+                  <th scope="col">Reference</th>
                   <th scope="col">Method</th>
-                  <th scope="col">State</th>
+                  <th scope="col">Provider</th>
+                  <th scope="col">Created</th>
                   <th scope="col">Action</th>
                 </tr>
               </thead>
@@ -180,6 +261,12 @@ export default function TransactionsPage() {
                       onClick={() => setSelectedTx(tx)}
                     >
                       <td>
+                        <StatusBadge status={tx.state} />
+                      </td>
+                      <td className={styles.numCol}>
+                        <Amount amountMinor={tx.amountMinor} currency="PHP" align="right" />
+                      </td>
+                      <td>
                         <div
                           style={{ fontWeight: 600, color: "var(--color-text-primary, #0f172a)" }}
                         >
@@ -191,27 +278,43 @@ export default function TransactionsPage() {
                           {tx.id}
                         </code>
                       </td>
-                      <td className={styles.numCol}>
-                        <Amount amountMinor={tx.amountMinor} currency="PHP" align="right" />
-                      </td>
                       <td>
                         <span className={styles.badgePill}>{tx.method.toUpperCase()}</span>
                       </td>
                       <td>
-                        <StatusBadge status={tx.state} />
+                        <span style={{ fontSize: "12px", color: "#475569" }}>{tx.provider}</span>
                       </td>
                       <td>
-                        <button
-                          type="button"
-                          className={styles.buttonSecondary}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedTx(tx);
-                          }}
-                          style={{ padding: "4px 8px", fontSize: "11px" }}
-                        >
-                          Inspect →
-                        </button>
+                        <span style={{ fontSize: "12px", color: "#64748b" }}>{tx.createdAt}</span>
+                      </td>
+                      <td>
+                        <div style={{ display: "flex", gap: "6px" }}>
+                          <button
+                            type="button"
+                            className={styles.buttonSecondary}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedTx(tx);
+                            }}
+                            style={{ padding: "4px 8px", fontSize: "11px" }}
+                          >
+                            Quick View
+                          </button>
+                          <Link
+                            href={`/ops/transactions/${tx.id}`}
+                            className={styles.buttonSecondary}
+                            style={{
+                              padding: "4px 8px",
+                              fontSize: "11px",
+                              textDecoration: "none",
+                              color: "#0f52ba",
+                              fontWeight: 600,
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            Inspect →
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -226,7 +329,20 @@ export default function TransactionsPage() {
           <div className={styles.cardHeader}>
             <h2 className={styles.cardTitle}>Investigation Inspector</h2>
             {selectedTx ? (
-              <StatusBadge status={selectedTx.state} />
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <StatusBadge status={selectedTx.state} />
+                <Link
+                  href={`/ops/transactions/${selectedTx.id}`}
+                  style={{
+                    fontSize: "12px",
+                    color: "#0f52ba",
+                    textDecoration: "none",
+                    fontWeight: 600,
+                  }}
+                >
+                  Full Detail ↗
+                </Link>
+              </div>
             ) : (
               <span className={styles.badgePill}>SELECT A TRANSACTION</span>
             )}
@@ -251,105 +367,99 @@ export default function TransactionsPage() {
                     display: "flex",
                     alignItems: "center",
                     gap: "8px",
+                    padding: "12px",
                     background: "#f8fafc",
-                    border: "1px solid #e2e8f0",
-                    padding: "10px 14px",
                     borderRadius: "6px",
+                    border: "1px solid var(--color-border, #e2e8f0)",
                     fontSize: "12px",
-                    overflowX: "auto",
+                    fontFamily: "ui-monospace, monospace",
                   }}
                 >
-                  <span style={{ color: "#166534", fontWeight: 600 }}>CREATED</span>
-                  <span style={{ color: "#94a3b8" }}>→</span>
-                  <span style={{ color: "#166534", fontWeight: 600 }}>SUBMISSION_PENDING</span>
-                  <span style={{ color: "#94a3b8" }}>→</span>
-                  <span style={{ color: "#166534", fontWeight: 600 }}>AWAITING_PAYMENT</span>
-                  <span style={{ color: "#94a3b8" }}>→</span>
-                  <span
-                    style={{
-                      color:
-                        selectedTx.state === "SUCCEEDED"
-                          ? "#166534"
-                          : selectedTx.state === "FAILED"
-                            ? "#991b1b"
-                            : "#0f52ba",
-                      fontWeight: 700,
-                    }}
-                  >
+                  <span style={{ color: "#16a34a" }}>CREATED</span>
+                  <span>→</span>
+                  <span style={{ color: "#16a34a" }}>SUBMISSION_PENDING</span>
+                  <span>→</span>
+                  <span style={{ color: selectedTx.state === "FAILED" ? "#dc2626" : "#16a34a" }}>
                     {selectedTx.state}
                   </span>
                 </div>
               </div>
 
-              <div>
-                <h3
+              <DetailList
+                items={[
+                  { label: "Payment Intent ID", value: <code>{selectedTx.id}</code> },
+                  { label: "Order Reference", value: selectedTx.orderNumber },
+                  {
+                    label: "Amount Settled",
+                    value: <Amount amountMinor={selectedTx.amountMinor} currency="PHP" />,
+                  },
+                  {
+                    label: "Authoritative Idempotency Key",
+                    value: <code>{selectedTx.idempotencyKey}</code>,
+                  },
+                  {
+                    label: "Verified Provider Event",
+                    value: <code>{selectedTx.providerEventId}</code>,
+                  },
+                  {
+                    label: "Provider",
+                    value: <span>{selectedTx.provider}</span>,
+                  },
+                ]}
+              />
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: "8px",
+                  paddingTop: "12px",
+                  borderTop: "1px solid var(--color-border, #e2e8f0)",
+                }}
+              >
+                <Link
+                  href={`/ops/transactions/${selectedTx.id}`}
+                  className={styles.buttonPrimary}
                   style={{
+                    flex: 1,
+                    textAlign: "center",
+                    textDecoration: "none",
+                    padding: "8px 12px",
                     fontSize: "12px",
-                    color: "var(--color-text-muted, #64748b)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.04em",
-                    margin: "0 0 8px 0",
                   }}
                 >
-                  Cryptographic Evidence & Audit Details
-                </h3>
-                <DetailList
-                  items={[
-                    {
-                      label: "Payment Intent ID",
-                      value: selectedTx.id,
-                      copyableText: selectedTx.id,
-                    },
-                    {
-                      label: "Order Reference",
-                      value: selectedTx.orderNumber,
-                      copyableText: selectedTx.orderNumber,
-                    },
-                    {
-                      label: "Idempotency Key",
-                      value: selectedTx.idempotencyKey,
-                      copyableText: selectedTx.idempotencyKey,
-                    },
-                    {
-                      label: "Provider Event ID",
-                      value: selectedTx.providerEventId,
-                      copyableText: selectedTx.providerEventId,
-                    },
-                    { label: "Row Lock Strategy", value: "SELECT FOR UPDATE (Atomic)" },
-                    { label: "Created Timestamp", value: selectedTx.createdAt },
-                  ]}
-                />
-              </div>
-
-              <div style={{ display: "flex", gap: "10px", marginTop: "4px" }}>
-                <button
-                  type="button"
-                  className={styles.buttonPrimary}
-                  onClick={() => handleSimulateRefund(selectedTx)}
-                >
-                  Stage Compensating Refund
-                </button>
+                  Open Full Investigation View ↗
+                </Link>
+                {selectedTx.state === "SUCCEEDED" && (
+                  <button
+                    type="button"
+                    className={styles.buttonSecondary}
+                    onClick={() => handleSimulateRefund(selectedTx)}
+                    style={{ flex: 1, fontSize: "12px" }}
+                  >
+                    Stage Refund
+                  </button>
+                )}
                 <button
                   type="button"
                   className={styles.buttonSecondary}
                   onClick={() => handleViewPayload(selectedTx)}
+                  style={{ fontSize: "12px" }}
                 >
-                  Verify Raw Webhook
+                  Verify Payload
                 </button>
               </div>
             </div>
           ) : (
             <div
               style={{
+                padding: "36px 20px",
                 textAlign: "center",
-                padding: "48px 20px",
                 color: "var(--color-text-muted, #64748b)",
+                fontSize: "13px",
               }}
             >
-              <p style={{ margin: 0, fontSize: "13px" }}>
-                Select a transaction from the table to inspect its full state lifecycle, idempotency
-                fingerprint, and HMAC webhook audit record.
-              </p>
+              Select any transaction row from the table to inspect state lifecycle, idempotency key
+              records, and cryptographic provider evidence.
             </div>
           )}
         </div>
