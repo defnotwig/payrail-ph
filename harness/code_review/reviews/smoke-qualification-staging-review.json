@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 2,
+  "reviewedBaseSha": "9406d85b678168d852d79a31191636955cc82dcc",
+  "reviewedDiffSha256": "df888c695b556fb1b4906dc59b561520c7177bb2327718ddeb342d9f04b57fc8",
+  "reviewer": "codex-subagent/independent-review",
+  "reviewSource": "separate-agent-review",
+  "reviewReport": "smoke-qualification-staging-review.md",
+  "reviewReportSha256": "59157babb075eaf941bdda3c4b4357f23ed1dcc1d4c30e53275d3b6393921a2b",
+  "reviewedAt": "2026-10-19T01:26:32.106Z",
+  "verdict": "approve",
+  "findings": []
+}
